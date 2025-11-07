@@ -16,7 +16,7 @@ if (isset($_SESSION['user_id'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log in - ระบบยืมคืนอุปกรณ์การแพทย์</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 
     <style>
         body {
@@ -98,7 +98,7 @@ if (isset($_SESSION['user_id'])) {
             บัญชีนี้ถูกระงับการใช้งานชั่วคราว!
         </div>
 
-        <form action="login_process.php" method="POST">
+        <form action="../process/login_process.php" method="POST">
             <div>
                 <input type="text" name="username" placeholder="Username" required>
             </div>

@@ -2,8 +2,8 @@
 // return_dashboard.php (อัปเดต V3)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session.php'); //
-require_once('db_connect.php'); //
+include('../includes/check_session.php'); //
+require_once('../includes/db_connect.php'); //
 
 // 2. ตรวจสอบสิทธิ์ (อนุญาต Admin และ Employee)
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'employee'])) {
@@ -42,7 +42,7 @@ $page_title = "คืนอุปกรณ์";
 $current_page = "return"; 
 
 // 5. เรียกใช้ Header
-include('includes/header.php'); //
+include('../includes/header.php'); //
 ?>
 
 <div class="header-row">
@@ -92,5 +92,5 @@ include('includes/header.php'); //
 
 <?php
 // 7. เรียกใช้ไฟล์ Footer (ซึ่งมี JavaScript popups อยู่)
-include('includes/footer.php'); 
+include('../includes/footer.php'); 
 ?>

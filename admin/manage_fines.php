@@ -7,8 +7,8 @@
 // - แก้ไขบั๊ก Dark Mode & NULL Student ID
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session.php');
-require_once('db_connect.php'); // (จะดึง FINE_RATE_PER_DAY มาด้วย)
+include('../includes/check_session.php');
+require_once('../includes/db_connect.php'); // (จะดึง FINE_RATE_PER_DAY มาด้วย)
 
 // 2. ตรวจสอบสิทธิ์ Admin 
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
@@ -75,7 +75,7 @@ try {
 // 5. ตั้งค่าตัวแปรสำหรับ Header
 $page_title = "จัดการค่าปรับ";
 $current_page = "manage_fines"; 
-include('includes/header.php');
+include('../includes/header.php');
 ?>
 
 <?php if (isset($error1)) echo "<p style='color: red;'>$error1</p>"; ?>
@@ -301,7 +301,7 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
                 return false;
             }
             
-            return fetch('direct_payment_process.php', { method: 'POST', body: formData }) 
+            return fetch('../process/direct_payment_process.php', { method: 'POST', body: formData }) 
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -408,7 +408,7 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
                 Swal.showValidationMessage('กรุณากรอกจำนวนเงิน');
                 return false;
             }
-            return fetch('record_payment_process.php', { method: 'POST', body: formData })
+            return fetch('../process/record_payment_process.php', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -440,5 +440,5 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
 </script>
 
 <?php
-include('includes/footer.php');
+include('../includes/footer.php');
 ?>

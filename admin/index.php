@@ -1,8 +1,8 @@
 <?php
 // 1. "จ้างยามมาเฝ้าประตู"
-include('includes/check_session.php'); //
+include('../includes/check_session.php');
 // 2. เรียกใช้ไฟล์เชื่อมต่อ DB
-require_once('db_connect.php'); //
+require_once('../includes/db_connect.php');
 
 // 3. ดึงข้อมูล KPI (กล่องสรุป)
 try {
@@ -95,7 +95,7 @@ try {
 $page_title = "Dashboard - ภาพรวม";
 $current_page = "index";
 // 8. เรียกใช้ไฟล์ Header
-include('includes/header.php'); 
+include('../includes/header.php'); 
 ?>
 
 <?php if (isset($kpi_error)) echo "<p style='color: red;'>$kpi_error</p>"; ?>
@@ -350,5 +350,5 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <?php
 // 9. เรียกใช้ไฟล์ Footer
-include('includes/footer.php');
+include('../includes/footer.php');
 ?>

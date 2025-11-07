@@ -2,8 +2,8 @@
 // admin_log.php (อัปเกรดสำหรับ AJAX Pagination)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session.php');
-require_once('db_connect.php');
+include('../includes/check_session.php');
+require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin 
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
@@ -83,7 +83,7 @@ $current_page = "admin_log";
 
 // ◀️ (ใหม่) 7. ถ้า "ไม่ใช่" AJAX ให้แสดง Header
 if (!$is_ajax) {
-    include('includes/header.php');
+    include('../includes/header.php');
 ?>
 
 <div class="header-row">
@@ -198,7 +198,7 @@ if (!$is_ajax) {
 <?php
 // ◀️ (ใหม่) 9. ถ้า "ไม่ใช่" AJAX ให้แสดง Footer
 if (!$is_ajax) {
-    include('includes/footer.php');
+    include('../includes/footer.php');
 }
 // ถ้าเป็น AJAX request สคริปต์จะจบการทำงานตรงนี้
 // โดยส่งเฉพาะ HTML ที่อยู่ใน #admin-log-content กลับไป

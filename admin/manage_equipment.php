@@ -1,8 +1,10 @@
 <?php
 // 1. "จ้างยามมาเฝ้าประตู"
-include('includes/check_session.php'); //
+// ◀️ (แก้ไข) เพิ่ม ../ เพื่อแก้ Error 500 ◀️
+include('../includes/check_session.php'); 
 // 2. เรียกใช้ไฟล์เชื่อมต่อ DB
-require_once('db_connect.php'); //
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+require_once('../includes/db_connect.php'); 
 
 // (โค้ดส่วนตรวจสอบ $_GET message ... ยังคงเดิม)
 $message = '';
@@ -17,10 +19,11 @@ if (isset($_GET['add']) && $_GET['add'] == 'success') {
 // ( ... โค้ด Error handling อื่นๆ ... )
 
 // 4. ตั้งค่าตัวแปรสำหรับหน้านี้
-$page_title = "จัดการประเภทอุปกรณ์"; // ◀️ (แก้ไขชื่อ)
+$page_title = "จัดการประเภทอุปกรณ์"; 
 $current_page = "manage_equip";
 // 5. เรียกใช้ไฟล์ Header
-include('includes/header.php');
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/header.php');
 
 // 6. ◀️ (แก้ไข) ดึงข้อมูลจากตาราง "ประเภท" (types)
 try {
@@ -72,12 +75,12 @@ try {
 </div>
 
 <div class="filter-row">
-    <form action="manage_equipment.php" method="GET" style="display: contents;">
+    <form action="admin/manage_equipment.php" method="GET" style="display: contents;">
         <label for="search_term">ค้นหา:</label>
         <input type="text" name="search" id="search_term" value="<?php echo htmlspecialchars($search_query); ?>" placeholder="ชื่อประเภท/รายละเอียด">
 
         <button type="submit" class="btn btn-return"><i class="fas fa-filter"></i> กรอง</button>
-        <a href="manage_equipment.php" class="btn btn-secondary"><i class="fas fa-times"></i> ล้างค่า</a>
+        <a href="admin/manage_equipment.php" class="btn btn-secondary"><i class="fas fa-times"></i> ล้างค่า</a>
     </form>
 </div>
 
@@ -120,7 +123,7 @@ try {
                         </td>
                         <td class="action-buttons">
                             <?php if ($_SESSION['role'] == 'admin'): ?>
-                                <a href="manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow">
+                                <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow">
                                     <i class="fas fa-list-ol"></i> จัดการรายชิ้น
                                 </a>
                                 
@@ -170,7 +173,7 @@ try {
 
                 <div class="pending-card-actions">
                     <?php if ($_SESSION['role'] == 'admin'): ?>
-                        <a href="manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow" style="margin-left: 0;">
+                        <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow" style="margin-left: 0;">
                             <i class="fas fa-list-ol"></i> จัดการ
                         </a>
                         <button type="button" class="btn btn-manage" onclick="openEditTypePopup(<?php echo $type['id']; ?>)">แก้ไข</button>
@@ -219,8 +222,8 @@ try {
                     return false;
                 }
                 
-                // (เรียกไฟล์ที่ถูกต้อง)
-                return fetch('add_equipment_type_process.php', {
+                // ◀️ (แก้ไข) เพิ่ม "process/" (สัมพันธ์กับ <base href>) ◀️
+                return fetch('process/add_equipment_type_process.php', {
                         method: 'POST',
                         body: new FormData(form)
                     })
@@ -235,12 +238,13 @@ try {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                Swal.fire('เพิ่มสำเร็จ!', 'เพิ่มประเภทอุปกรณ์ใหม่เรียบร้อย', 'success').then(() => location.href = 'manage_equipment.php?add=success');
+                // ◀️ (แก้ไข) แก้ไข location.href ◀️
+                Swal.fire('เพิ่มสำเร็จ!', 'เพิ่มประเภทอุปกรณ์ใหม่เรียบร้อย', 'success').then(() => location.href = 'admin/manage_equipment.php?add=success');
             }
         });
     }
     
-    // ◀️ (ใหม่) ฟังก์ชันสำหรับ "ลบ" ประเภท
+    // ◀️ (ฟังก์ชัน "ลบ" ประเภท)
     function confirmDeleteType(typeId, typeName) {
         Swal.fire({
             title: "คุณแน่ใจหรือไม่?",
@@ -257,7 +261,8 @@ try {
                 const formData = new FormData();
                 formData.append('id', typeId);
 
-                fetch('delete_equipment_type_process.php', {
+                // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                fetch('process/delete_equipment_type_process.php', {
                     method: 'POST',
                     body: formData
                 })
@@ -276,12 +281,13 @@ try {
         });
     }
 
-    // ◀️ (ใหม่) ฟังก์ชันสำหรับ "แก้ไข" ประเภท
+    // ◀️ (ฟังก์ชัน "แก้ไข" ประเภท)
     function openEditTypePopup(typeId) {
         Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
         
         // 1. ดึงข้อมูลเดิมมาแสดง
-        fetch(`get_equipment_type_data.php?id=${typeId}`)
+        // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
+        fetch(`ajax/get_equipment_type_data.php?id=${typeId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status !== 'success') throw new Error(data.message);
@@ -292,6 +298,7 @@ try {
                         <i class="fas fa-camera"></i>
                     </div>`;
                 if (type.image_url) {
+                    // ◀️ (แก้ไข) Path รูปภาพถูกต้องแล้ว (เพราะ <base href>) ◀️
                     imagePreviewHtml = `
                         <img src="${type.image_url}?t=${new Date().getTime()}" 
                              alt="รูปตัวอย่าง" 
@@ -337,8 +344,9 @@ try {
                             Swal.showValidationMessage('กรุณากรอกชื่อประเภทอุปกรณ์');
                             return false;
                         }
-                        // 3. ส่งข้อมูลไปที่ 'edit_equipment_type_process.php'
-                        return fetch('edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) })
+                        // 3. ส่งข้อมูลไปที่
+                        // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                        return fetch('process/edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) })
                             .then(response => response.json())
                             .then(data => {
                                 if (data.status !== 'success') throw new Error(data.message);
@@ -348,7 +356,8 @@ try {
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลประเภทอุปกรณ์เรียบร้อย', 'success').then(() => location.href = 'manage_equipment.php?edit=success');
+                        // ◀️ (แก้ไข) แก้ไข location.href ◀️
+                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลประเภทอุปกรณ์เรียบร้อย', 'success').then(() => location.href = 'admin/manage_equipment.php?edit=success');
                     }
                 });
             })
@@ -360,5 +369,6 @@ try {
 
 <?php
 // 7. เรียกใช้ไฟล์ Footer
-include('includes/footer.php');
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/footer.php');
 ?>

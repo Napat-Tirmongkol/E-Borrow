@@ -1,10 +1,8 @@
 <?php
-// manage_items.php
-// (ไฟล์ใหม่)
-
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session.php');
-require_once('db_connect.php');
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/check_session.php');
+require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
@@ -12,102 +10,130 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit;
 }
 
-// 3. รับ type_id จาก URL
+// 3. รับ Type ID
 $type_id = isset($_GET['type_id']) ? (int)$_GET['type_id'] : 0;
 if ($type_id == 0) {
-    die("ไม่ได้ระบุประเภทอุปกรณ์ <a href='manage_equipment.php'>กลับไปหน้าจัดการประเภท</a>");
+    header("Location: manage_equipment.php"); // (ถ้าไม่มี ID ให้เด้งกลับ)
+    exit;
 }
 
-// 4. ดึงข้อมูล "ประเภท" อุปกรณ์
+// 4. (Query ที่ 1) ดึงข้อมูล "ประเภท"
 try {
     $stmt_type = $pdo->prepare("SELECT * FROM med_equipment_types WHERE id = ?");
     $stmt_type->execute([$type_id]);
-    $equipment_type = $stmt_type->fetch(PDO::FETCH_ASSOC);
+    $type_info = $stmt_type->fetch(PDO::FETCH_ASSOC);
 
-    if (!$equipment_type) {
-        die("ไม่พบประเภทอุปกรณ์นี้ <a href='manage_equipment.php'>กลับไปหน้าจัดการประเภท</a>");
+    if (!$type_info) {
+        header("Location: manage_equipment.php"); // (ถ้า ID ผิด ให้เด้งกลับ)
+        exit;
     }
-
-    // 5. ดึงข้อมูล "ชิ้น" อุปกรณ์ทั้งหมดในประเภทนี้
-    $stmt_items = $pdo->prepare("SELECT * FROM med_equipment_items WHERE type_id = ? ORDER BY name ASC, serial_number ASC");
-    $stmt_items->execute([$type_id]);
-    $equipment_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
-
 } catch (PDOException $e) {
-    // ◀️ (แก้ไข) ใช้ ->
-    die("เกิดข้อผิดพลาดในการดึงข้อมูล: " . $e->getMessage());
+    die("เกิดข้อผิดพลาดในการดึงข้อมูลประเภท: " . $e->getMessage());
+}
+
+// 5. (Query ที่ 2) ดึงข้อมูล "ชิ้น" อุปกรณ์ (items)
+try {
+    $sql_items = "SELECT 
+                    i.*, 
+                    s.full_name as student_name, 
+                    t.borrow_date, t.due_date
+                  FROM med_equipment_items i
+                  LEFT JOIN med_transactions t ON i.id = t.item_id AND t.status = 'borrowed'
+                  LEFT JOIN med_students s ON t.borrower_student_id = s.id
+                  WHERE i.type_id = ?
+                  ORDER BY i.status ASC, i.id ASC";
+    $stmt_items = $pdo->prepare($sql_items);
+    $stmt_items->execute([$type_id]);
+    $items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $items_error = "เกิดข้อผิดพลาดในการดึงข้อมูลอุปกรณ์: " . $e->getMessage();
+    $items = [];
 }
 
 // 6. ตั้งค่าตัวแปรสำหรับ Header
-$page_title = "จัดการอุปกรณ์รายชิ้น - " . htmlspecialchars($equipment_type['name']);
-$current_page = "manage_equip";
-include('includes/header.php');
+$page_title = "จัดการรายชิ้น: " . htmlspecialchars($type_info['name']);
+$current_page = "manage_equip"; // (ให้เมนู "จัดการอุปกรณ์" Active)
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/header.php');
 ?>
 
 <div class="header-row">
-    <div>
-        <h2 style="display: flex; align-items: center; gap: 1rem;">
-            <a href="manage_equipment.php" class="btn btn-secondary" style="font-size: 1rem;">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-            <i class="fas fa-list-ol"></i>
-            จัดการอุปกรณ์รายชิ้น: <strong><?php echo htmlspecialchars($equipment_type['name']); ?></strong>
-        </h2>
-        <p class="text-muted" style="margin-left: 55px;">
-            เพิ่ม/ลบ/แก้ไข อุปกรณ์แต่ละชิ้นที่อยู่ในประเภทนี้
-        </p>
-    </div>
-    <button class="add-btn" onclick="openAddItemPopup(<?php echo $type_id; ?>, '<?php echo htmlspecialchars(addslashes($equipment_type['name'])); ?>')">
+    <a href="admin/manage_equipment.php" class="btn btn-secondary" style="margin-right: 1rem;">
+        <i class="fas fa-arrow-left"></i> กลับไปหน้าประเภท
+    </a>
+    <h2><i class="fas fa-list-ol"></i> จัดการอุปกรณ์รายชิ้น</h2>
+    
+    <button class="add-btn" 
+            onclick="openAddItemPopup(<?php echo $type_id; ?>, '<?php echo htmlspecialchars(addslashes($type_info['name'])); ?>')">
         <i class="fas fa-plus"></i> เพิ่มอุปกรณ์ชิ้นใหม่
     </button>
 </div>
 
+<div class="section-card" style="margin-bottom: 1.5rem;">
+    <h4><?php echo htmlspecialchars($type_info['name']); ?></h4>
+    <p class="text-muted" style="white-space: pre-wrap;"><?php echo htmlspecialchars($type_info['description'] ?? 'ไม่มีรายละเอียด'); ?></p>
+    <div style="display: flex; gap: 1rem; font-weight: bold;">
+        <span>จำนวนทั้งหมด: <?php echo $type_info['total_quantity']; ?> ชิ้น</span>
+        <span style="color: var(--color-success);">ว่าง: <?php echo $type_info['available_quantity']; ?> ชิ้น</span>
+    </div>
+</div>
+
 <div class="table-container">
+    <?php if (isset($items_error)) echo "<p style='color: red; padding: 15px;'>$items_error</p>"; ?>
     <table>
         <thead>
             <tr>
-                <th style="width: 80px;">ID ชิ้น</th>
-                <th>ชื่อเฉพาะ (ถ้ามี)</th>
-                <th>เลขซีเรียล</th>
-                <th>รายละเอียด/หมายเหตุ</th>
-                <th style="width: 150px;">สถานะ</th>
-                <th style="width: 180px;">จัดการ</th>
+                <th style="width: 60px;">ID</th>
+                <th>ชื่อ/รุ่น</th>
+                <th>เลขซีเรียล (S/N)</th>
+                <th>สถานะ</th>
+                <th>ข้อมูลการยืม (ถ้ามี)</th>
+                <th style="width: 150px;">จัดการ</th>
             </tr>
         </thead>
         <tbody>
-            <?php if (empty($equipment_items)): ?>
+            <?php if (empty($items)): ?>
                 <tr>
                     <td colspan="6" style="text-align: center;">ยังไม่มีอุปกรณ์รายชิ้นในประเภทนี้</td>
                 </tr>
             <?php else: ?>
-                <?php foreach ($equipment_items as $item): ?>
+                <?php foreach ($items as $item): ?>
                     <tr>
-                        <td><?php echo $item['id']; ?></td>
-                        <td><?php echo htmlspecialchars($item['name']); ?></td>
+                        <td><strong><?php echo $item['id']; ?></strong></td>
+                        <td class="truncate-text" title="<?php echo htmlspecialchars($item['name']); ?>">
+                            <?php echo htmlspecialchars($item['name']); ?>
+                        </td>
                         <td><?php echo htmlspecialchars($item['serial_number'] ?? '-'); ?></td>
-                        <td style="white-space: pre-wrap;"><?php echo htmlspecialchars($item['description'] ?? '-'); ?></td>
                         <td>
-                            <?php
-                                $status = $item['status'];
-                                $badge_class = 'available';
-                                if ($status == 'borrowed') {
-                                    $badge_class = 'borrowed';
-                                } elseif ($status == 'maintenance') {
-                                    $badge_class = 'maintenance';
-                                }
-                                echo "<span class='status-badge {$badge_class}'>" . ucfirst($status) . "</span>";
+                            <?php 
+                            $status = $item['status'];
+                            if ($status == 'available') {
+                                echo '<span class="status-badge available">ว่าง</span>';
+                            } elseif ($status == 'borrowed') {
+                                echo '<span class="status-badge borrowed">ถูกยืม</span>';
+                            } elseif ($status == 'maintenance') {
+                                echo '<span class="status-badge maintenance">ซ่อมบำรุง</span>';
+                            }
                             ?>
                         </td>
+                        <td>
+                            <?php if ($status == 'borrowed' && $item['student_name']): ?>
+                                <strong>ผู้ยืม:</strong> <?php echo htmlspecialchars($item['student_name']); ?><br>
+                                <small>กำหนดคืน: <?php echo date('d/m/Y', strtotime($item['due_date'])); ?></small>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="action-buttons">
-                            <?php if ($item['status'] != 'borrowed'): // (ถ้าไม่ถูกยืมอยู่) ?>
-                                <button type="button" class="btn btn-manage" onclick="openEditItemPopup(<?php echo $item['id']; ?>)">
+                            <?php if ($status != 'borrowed'): ?>
+                                <button class="btn btn-manage btn-sm" onclick="openEditItemPopup(<?php echo $item['id']; ?>)">
                                     <i class="fas fa-edit"></i> แก้ไข
                                 </button>
-                                <button type="button" class="btn btn-danger" onclick="confirmDeleteItem(<?php echo $item['id']; ?>, <?php echo $item['type_id']; ?>)">
+                                <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(<?php echo $item['id']; ?>, <?php echo $item['type_id']; ?>)">
                                     <i class="fas fa-trash"></i> ลบ
                                 </button>
-                            <?php else: // (ถ้าถูกยืมอยู่) ?>
-                                <span class="text-muted">ถูกยืมอยู่</span>
+                            <?php else: ?>
+                                <span class="text-muted" style="font-size: 0.9em;">(คืนของก่อน)</span>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -118,5 +144,8 @@ include('includes/header.php');
 </div>
 
 <?php
-include('includes/footer.php');
+// 7. เรียกใช้ Footer
+// (เราดึงฟังก์ชัน JS มาจาก footer.php)
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/footer.php');
 ?>
