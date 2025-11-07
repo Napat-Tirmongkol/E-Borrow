@@ -1,12 +1,13 @@
 <?php
-// get_equipment_type_data.php
+// ajax/get_equipment_type_data.php
 // (ไฟล์ใหม่)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
 
-// 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
+// 2. ตรวจสอบสิทธิ์ Admin (เพราะไฟล์นี้ดึงข้อมูลสำหรับ Admin)
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
@@ -15,14 +16,11 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 header('Content-Type: application/json');
 
 // 3. สร้างตัวแปรสำหรับเก็บคำตอบ
-$response = [
-    'status' => 'error', 
-    'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ',
-    'equipment_type' => null
-];
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
 
-// 4. รับ ID ประเภทอุปกรณ์จาก URL
+// 4. รับ ID
 $type_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
 if ($type_id == 0) {
     $response['message'] = 'ไม่ได้ระบุ ID ประเภทอุปกรณ์';
     echo json_encode($response);
@@ -30,24 +28,23 @@ if ($type_id == 0) {
 }
 
 try {
-    // 5. ดึงข้อมูลประเภทอุปกรณ์
+    // 5. ดึงข้อมูล
     $stmt = $pdo->prepare("SELECT * FROM med_equipment_types WHERE id = ?");
     $stmt->execute([$type_id]);
-    $type = $stmt->fetch(PDO::FETCH_ASSOC);
+    $type_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($type) {
+    if ($type_data) {
         $response['status'] = 'success';
-        $response['equipment_type'] = $type;
-        $response['message'] = 'ดึงข้อมูลสำเร็จ';
+        $response['equipment_type'] = $type_data;
     } else {
-        $response['message'] = 'ไม่พบข้อมูลประเภทอุปกรณ์';
+        $response['message'] = 'ไม่พบข้อมูลประเภทอุปกรณ์ (ID: ' . $type_id . ')';
     }
 
 } catch (PDOException $e) {
     $response['message'] = 'เกิดข้อผิดพลาด DB: ' . $e->getMessage();
 }
 
-// 6. ส่งคำตอบ (JSON) กลับไปให้ JavaScript
+// 6. ส่งคำตอบ
 echo json_encode($response);
 exit;
 ?>

@@ -4,8 +4,8 @@
 // ดึงข้อมูลสำหรับ Popup "ยืนยันการรับคืน"
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session_ajax.php');
-require_once('db_connect.php'); //
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php'); //
 
 // 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {

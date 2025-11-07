@@ -1,10 +1,13 @@
 <?php
-// get_item_data.php
-// (ไฟล์ใหม่สำหรับดึงข้อมูล Item ไปแก้ไข)
+// ajax/get_item_data.php
+// (ไฟล์ใหม่)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
+// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
 
+// 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
@@ -12,13 +15,12 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 }
 header('Content-Type: application/json');
 
-$response = [
-    'status' => 'error',
-    'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ',
-    'item' => null
-];
+// 3. สร้างตัวแปรสำหรับเก็บคำตอบ
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
 
+// 4. รับ ID
 $item_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
 if ($item_id == 0) {
     $response['message'] = 'ไม่ได้ระบุ ID อุปกรณ์';
     echo json_encode($response);
@@ -26,21 +28,23 @@ if ($item_id == 0) {
 }
 
 try {
+    // 5. ดึงข้อมูล
     $stmt = $pdo->prepare("SELECT * FROM med_equipment_items WHERE id = ?");
     $stmt->execute([$item_id]);
-    $item = $stmt->fetch(PDO::FETCH_ASSOC);
+    $item_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($item) {
+    if ($item_data) {
         $response['status'] = 'success';
-        $response['item'] = $item;
+        $response['item'] = $item_data;
     } else {
-        $response['message'] = 'ไม่พบข้อมูลอุปกรณ์';
+        $response['message'] = 'ไม่พบข้อมูลอุปกรณ์ (ID: ' . $item_id . ')';
     }
 
 } catch (PDOException $e) {
     $response['message'] = 'เกิดข้อผิดพลาด DB: ' . $e->getMessage();
 }
 
+// 6. ส่งคำตอบ
 echo json_encode($response);
 exit;
 ?>

@@ -1,19 +1,26 @@
 <?php
-// get_items_for_type.php
+// ajax/get_items_for_type.php
 // (ไฟล์ใหม่)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
+// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
 
+// 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
+    exit;
+}
 header('Content-Type: application/json');
-$response = [
-    'status' => 'error',
-    'message' => 'Invalid request',
-    'type' => null,
-    'items' => []
-];
 
+// 3. สร้างตัวแปรสำหรับเก็บคำตอบ
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
+
+// 4. รับ ID
 $type_id = isset($_GET['type_id']) ? (int)$_GET['type_id'] : 0;
+
 if ($type_id == 0) {
     $response['message'] = 'ไม่ได้ระบุ ID ประเภทอุปกรณ์';
     echo json_encode($response);
@@ -21,28 +28,33 @@ if ($type_id == 0) {
 }
 
 try {
-    // 1. ดึงข้อมูลประเภท
-    $stmt_type = $pdo->prepare("SELECT id, name FROM med_equipment_types WHERE id = ?");
+    // 5. (Query ที่ 1) ดึงข้อมูล "ประเภท" (เผื่อใช้ชื่อ)
+    $stmt_type = $pdo->prepare("SELECT name FROM med_equipment_types WHERE id = ?");
     $stmt_type->execute([$type_id]);
-    $type_info = $stmt_type->fetch(PDO::FETCH_ASSOC);
+    $type_data = $stmt_type->fetch(PDO::FETCH_ASSOC);
 
-    if (!$type_info) {
-        throw new Exception('ไม่พบประเภทอุปกรณ์นี้');
+    if (!$type_data) {
+        throw new Exception("ไม่พบประเภทอุปกรณ์ (ID: $type_id)");
     }
 
-    // 2. ดึงข้อมูลอุปกรณ์รายชิ้นทั้งหมดในประเภทนั้น
-    $stmt_items = $pdo->prepare("SELECT * FROM med_equipment_items WHERE type_id = ? ORDER BY id DESC");
+    // 6. (Query ที่ 2) ดึงข้อมูล "ชิ้น" อุปกรณ์ (items)
+    $stmt_items = $pdo->prepare("SELECT * FROM med_equipment_items WHERE type_id = ? ORDER BY id ASC");
     $stmt_items->execute([$type_id]);
-    $items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+    $items_data = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
 
+    // 7. ส่งข้อมูลกลับ
     $response['status'] = 'success';
-    $response['type'] = $type_info;
-    $response['items'] = $items;
+    $response['type'] = $type_data;
+    $response['items'] = $items_data;
 
+
+} catch (PDOException $e) {
+    $response['message'] = 'เกิดข้อผิดพลาด DB: ' . $e->getMessage();
 } catch (Exception $e) {
     $response['message'] = $e->getMessage();
 }
 
+// 8. ส่งคำตอบ
 echo json_encode($response);
 exit;
 ?>

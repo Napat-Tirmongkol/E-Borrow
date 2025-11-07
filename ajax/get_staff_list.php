@@ -2,8 +2,8 @@
 // get_staff_list.php
 // ดึงรายชื่อเจ้าหน้าที่ (Admin/Employee) ทั้งหมดเพื่อใช้ใน Dropdown
 
-include('includes/check_student_session.php'); // ใช้ "ยาม" ของ นศ. ตรวจสอบ
-require_once('db_connect.php'); //
+include('../includes/check_student_session.php'); // ใช้ "ยาม" ของ นศ. ตรวจสอบ
+require_once('../includes/db_connect.php'); //
 
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'staff' => []];
