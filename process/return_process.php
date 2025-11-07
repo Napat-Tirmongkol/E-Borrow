@@ -1,86 +1,88 @@
 <?php
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php'); // ◀️ (เพิ่ม) เรียกใช้ Log
+// process/return_process.php
+// (อัปเดต V5 - รองรับระบบ Types/Items)
 
-// 2. ตรวจสอบสิทธิ์ (อนุญาต Admin และ Employee)
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'employee'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
-    exit;
-}
+// ◀️ (แก้ไข) เพิ่ม ../ ◀️
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php');
+
 header('Content-Type: application/json');
-
-// 3. สร้างตัวแปรสำหรับเก็บคำตอบ
 $response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
 
-// 4. ตรวจสอบว่าเป็นการส่งข้อมูลแบบ POST หรือไม่
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    // 5. รับข้อมูลจากฟอร์ม
-    $equipment_id   = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0;
+    $item_id = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0; // (_POST[equipment_id] คือ item_id)
     $transaction_id = isset($_POST['transaction_id']) ? (int)$_POST['transaction_id'] : 0;
+    $staff_id = $_SESSION['user_id'];
 
-    if ($equipment_id == 0 || $transaction_id == 0) {
-        $response['message'] = 'ข้อมูล Transaction ID หรือ Equipment ID ไม่ครบถ้วน';
+    if ($item_id == 0 || $transaction_id == 0) {
+        $response['message'] = 'ข้อมูลที่ส่งมาไม่ครบถ้วน (Item ID หรือ Transaction ID)';
         echo json_encode($response);
         exit;
     }
 
-    // 6. เริ่ม Transaction (การคืน)
     try {
         $pdo->beginTransaction();
 
-        // 6.1 UPDATE อุปกรณ์ (item) เป็น 'available'
-        $sql_update_item = "UPDATE med_equipment_items SET status = 'available' WHERE id = ? AND status = 'borrowed'";
-        $stmt_update_item = $pdo->prepare($sql_update_item);
-        $stmt_update_item->execute([$equipment_id]);
-        
-        // 6.2 UPDATE ประวัติการยืม (transaction) เป็น 'returned'
-        $sql_update_trans = "UPDATE med_transactions SET status = 'returned', return_date = NOW() WHERE id = ? AND status = 'borrowed'";
-        $stmt_update_trans = $pdo->prepare($sql_update_trans);
-        $stmt_update_trans->execute([$transaction_id]);
-        
-        // 6.3 (ใหม่) UPDATE จำนวนในประเภท (type)
-        if ($stmt_update_item->rowCount() > 0) {
-            $stmt_get_type = $pdo->prepare("SELECT type_id FROM med_equipment_items WHERE id = ?");
-            $stmt_get_type->execute([$equipment_id]);
-            $type_id = $stmt_get_type->fetchColumn();
-            if ($type_id) {
-                $stmt_type = $pdo->prepare("UPDATE med_equipment_types SET available_quantity = available_quantity + 1 WHERE id = ?");
-                $stmt_type->execute([$type_id]);
-            }
+        // 1. ดึงข้อมูล Type ID จาก Item ID
+        $stmt_get_type = $pdo->prepare("SELECT type_id FROM med_equipment_items WHERE id = ?");
+        $stmt_get_type->execute([$item_id]);
+        $type_id = $stmt_get_type->fetchColumn();
+
+        if (!$type_id) {
+            throw new Exception("ไม่พบประเภทของอุปกรณ์ (Item ID: $item_id)");
         }
 
-        // 6.4 ตรวจสอบว่าสำเร็จ
-        if ($stmt_update_item->rowCount() == 0 || $stmt_update_trans->rowCount() == 0) {
-            throw new Exception("ไม่สามารถคืนอุปกรณ์ได้ (อาจถูกคืนไปแล้ว หรือข้อมูลผิดพลาด)");
+        // 2. อัปเดต "ชิ้น" อุปกรณ์ (items) กลับเป็น 'available'
+        $stmt_item = $pdo->prepare("UPDATE med_equipment_items 
+                                   SET status = 'available' 
+                                   WHERE id = ? AND status = 'borrowed'");
+        $stmt_item->execute([$item_id]);
+
+        if ($stmt_item->rowCount() == 0) {
+             throw new Exception("ไม่สามารถอัปเดตสถานะ Item ได้ (อาจถูกคืนไปแล้ว)");
+        }
+        
+        // 3. อัปเดต "ประเภท" (types) คืนจำนวน +1
+        $stmt_type = $pdo->prepare("UPDATE med_equipment_types 
+                                   SET available_quantity = available_quantity + 1 
+                                   WHERE id = ?");
+        $stmt_type->execute([$type_id]);
+
+
+        // 4. อัปเดต "การยืม" (transactions)
+        $stmt_trans = $pdo->prepare("UPDATE med_transactions 
+                                    SET status = 'returned', 
+                                        return_date = CURDATE(),
+                                        return_staff_id = ?
+                                    WHERE id = ? AND status = 'borrowed'");
+        $stmt_trans->execute([$staff_id, $transaction_id]);
+        
+        if ($stmt_trans->rowCount() == 0) {
+             throw new Exception("ไม่สามารถอัปเดตสถานะ Transaction ได้ (อาจถูกคืนไปแล้ว)");
         }
 
-        // ◀️ --- (เพิ่มส่วน Log) --- ◀️
-        $admin_user_id = $_SESSION['user_id'] ?? null;
+        // 5. บันทึก Log
         $admin_user_name = $_SESSION['full_name'] ?? 'System';
-        $log_desc = "Admin '{$admin_user_name}' (ID: {$admin_user_id}) ได้รับคืนอุปกรณ์ (EID: {$equipment_id}) จากคำสั่งยืม (TID: {$transaction_id})";
-        log_action($pdo, $admin_user_id, 'process_return', $log_desc);
-        // ◀️ --- (จบส่วน Log) --- ◀️
-        
+        $log_desc = "Admin '{$admin_user_name}' (ID: {$staff_id}) 
+                     ได้บันทึกการคืนอุปกรณ์ (ItemID: {$item_id}, TID: {$transaction_id})";
+        log_action($pdo, $staff_id, 'return_equipment', $log_desc);
+
         $pdo->commit();
         
-        // 7. ถ้าสำเร็จ
         $response['status'] = 'success';
-        $response['message'] = 'รับคืนอุปกรณ์เรียบร้อย';
+        $response['message'] = 'บันทึกการคืนอุปกรณ์สำเร็จ';
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        $response['message'] = 'เกิดข้อผิดพลาด: ' . $e->getMessage();
+        $response['message'] = $e->getMessage();
     }
 
 } else {
     $response['message'] = 'ต้องใช้วิธี POST เท่านั้น';
 }
 
-// 8. ส่งคำตอบ (JSON) กลับไปให้ JavaScript
 echo json_encode($response);
 exit;
 ?>

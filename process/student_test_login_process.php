@@ -15,7 +15,7 @@ $TEST_STUDENT_ID_TO_USE = 3;
 // 1. ตรวจสอบว่าส่งแบบ POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    require_once('db_connect.php');
+    require_once('../includes/db_connect.php');
     $submitted_code = $_POST['test_code'];
 
     // 2. ตรวจสอบรหัส
@@ -35,12 +35,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_role'] = $student['status'];
 
                 // 5. ส่งไปหน้า Dashboard
-                header("Location: student_dashboard.php");
+                header("Location: ../index.php");
                 exit;
                 
             } else {
                 // (เกิดกรณีที่ตั้ง $TEST_STUDENT_ID_TO_USE ผิด)
-                header("Location: student_test_login.php?error=Test user ID {$TEST_STUDENT_ID_TO_USE} not found in DB.");
+                header("Location: ../student_test_login.php?error=Test user ID {$TEST_STUDENT_ID_TO_USE} not found in DB.");
                 exit;
             }
 
@@ -50,13 +50,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     } else {
         // 10. รหัสผิด
-        header("Location: student_test_login.php?error=1");
+        header("Location: ../student_test_login.php?error=1");
         exit;
     }
 
 } else {
     // ถ้าเข้ามาหน้านี้ตรงๆ
-    header("Location: student_test_login.php");
+    header("Location: ../student_test_login.php");
     exit;
 }
 ?>

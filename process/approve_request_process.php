@@ -2,9 +2,9 @@
 // approve_request_process.php
 // (แก้ไข: 1. แก้ไข SQL ให้ดึง type_id/item_id 2. ลบตรรกะการค้นหา item ใหม่)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php'); 
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php');
 
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'message' => 'Invalid request'];

@@ -1,11 +1,11 @@
 <?php
-// edit_equipment_type_process.php
-// (ไฟล์ใหม่)
+// process/edit_equipment_type_process.php
+// (ฉบับแก้ไข Path อัปโหลด)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
@@ -49,18 +49,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // 8. ตรวจสอบว่ามีการอัปโหลดไฟล์ใหม่หรือไม่
         if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == 0) {
-            $upload_dir = 'images/';
+            
+            // ◀️ (แก้ไข) Path ที่จะ "ย้ายไฟล์ไปเก็บ" (ต้องถอยหลัง ../) ◀️
+            $upload_dir_server_path = '../uploads/equipment_images/'; 
+            
+            // ◀️ (แก้ไข) Path ที่จะ "บันทึกลง DB" (ไม่ต้องถอยหลัง สัมพันธ์กับ <base href>) ◀️
+            $upload_dir_db_path = 'uploads/equipment_images/';
+
+            if (!is_dir($upload_dir_server_path)) {
+                mkdir($upload_dir_server_path, 0755, true);
+            }
+
             $file_extension = pathinfo($_FILES['image_file']['name'], PATHINFO_EXTENSION);
             $new_filename = uniqid('equip-', true) . '.' . strtolower($file_extension);
-            $target_file = $upload_dir . $new_filename;
+            
+            $target_file_server = $upload_dir_server_path . $new_filename;
+            $target_file_db = $upload_dir_db_path . $new_filename;
+
 
             $check = getimagesize($_FILES['image_file']['tmp_name']);
             if ($check !== false) {
-                if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target_file)) {
-                    if (!empty($image_url_to_db) && file_exists($image_url_to_db)) {
-                        @unlink($image_url_to_db);
+                if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target_file_server)) {
+                    
+                    // ◀️ (แก้ไข) เพิ่ม ../ ตอนเช็คไฟล์เก่า ◀️
+                    if (!empty($image_url_to_db) && file_exists('../' . $image_url_to_db)) {
+                        @unlink('../' . $image_url_to_db);
                     }
-                    $image_url_to_db = $target_file;
+                    $image_url_to_db = $target_file_db; // (ใช้ Path ที่ถูกต้อง)
                 } else {
                     throw new Exception("อัปโหลดไฟล์ใหม่ล้มเหลว (ย้ายไฟล์ไม่สำเร็จ)");
                 }
@@ -81,7 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $response['message'] = 'บันทึกการเปลี่ยนแปลงสำเร็จ';
 
     } catch (PDOException $e) {
-        if ($e->getCode() == '23000') { // ◀️ (แก้ไข)
+        if ($e->getCode() == '23000') { 
              $response['message'] = 'ชื่อประเภทอุปกรณ์นี้มีในระบบแล้ว';
         } else {
              $response['message'] = 'เกิดข้อผิดพลาด DB: ' . $e->getMessage();

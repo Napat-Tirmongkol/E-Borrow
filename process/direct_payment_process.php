@@ -39,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($payment_method == 'bank_transfer') {
             if (isset($_FILES['payment_slip']) && $_FILES['payment_slip']['error'] == 0) {
                 
-                $upload_dir = 'uploads/slips/';
+                $upload_dir = '../uploads/slips/';
                 // (สร้าง Folder ถ้ายังไม่มี)
                 if (!is_dir($upload_dir)) {
                     mkdir($upload_dir, 0755, true);

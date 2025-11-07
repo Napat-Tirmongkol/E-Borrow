@@ -2,9 +2,9 @@
 // reject_request_process.php
 // (แก้ไข: เพิ่มตรรกะการคืน Item (med_equipment_items) และ Type (med_equipment_types) กลับเข้าสต็อก)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php'); 
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php');
 
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'message' => 'Invalid request'];

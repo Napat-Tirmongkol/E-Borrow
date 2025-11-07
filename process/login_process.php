@@ -6,8 +6,9 @@ session_start();
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // 3. เรียกใช้ไฟล์เชื่อมต่อฐานข้อมูล
-    require_once('db_connect.php');
-    require_once('includes/log_function.php');
+    // ◀️ (แก้ไข) เพิ่ม ../ ◀️
+    require_once('../includes/db_connect.php');
+    require_once('../includes/log_function.php');
 
     // 4. รับค่าจากฟอร์ม
     $username = $_POST['username'];
@@ -28,7 +29,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // (ใหม่) 7.1 ตรวจสอบว่าบัญชีถูกระงับหรือไม่
         if (isset($user['account_status']) && $user['account_status'] == 'disabled') {
             // รหัสถูก แต่บัญชีถูกระงับ
-            header("Location: login.php?error=disabled");
+            // ◀️ (แก้ไข) เพิ่ม ../ ◀️
+            header("Location: ../admin/login.php?error=disabled");
             exit;
         }
 
@@ -41,22 +43,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             log_action($pdo, $user['id'], 'login_password', $log_desc);
             
             // 9. ส่งกลับไปหน้า index.php
-            header("Location: index.php");
+            // ◀️ (แก้ไข) เพิ่ม ../ ◀️
+            header("Location: ../admin/index.php");
             exit;
 
         } else {
             // 10. Log in ไม่สำเร็จ
-            header("Location: login.php?error=1");
+            // ◀️ (แก้ไข) เพิ่ม ../ ◀️
+            header("Location: ../admin/login.php?error=1");
             exit;
         }
 
     } catch (PDOException $e) {
-        die("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้: " . $e->getMessage()); // ◀️ (แก้ไข)
+        die("เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้: " . $e->getMessage()); // (ถูกต้อง)
     }
 
 } else {
     // ถ้าเข้ามาหน้านี้ตรงๆ
-    header("Location: login.php");
+    // ◀️ (แก้ไข) เพิ่ม ../ ◀️
+    header("Location: ../admin/login.php");
     exit;
 }
 ?>

@@ -2,9 +2,9 @@
 // edit_item_process.php
 // (ไฟล์ใหม่สำหรับบันทึกการแก้ไข Item)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php');
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header('Content-Type: application/json');

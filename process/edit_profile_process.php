@@ -7,7 +7,7 @@ require_once('db_connect.php');
 
 // 1. "ยามเฝ้าประตู"
 if (empty($_SESSION['student_id']) || $_SERVER["REQUEST_METHOD"] != "POST") {
-    header("Location: line_login.php");
+    header("Location: ../login.php");
     exit;
 }
 
@@ -22,7 +22,7 @@ $phone_number = trim($_POST['phone_number']);
 
 // 4. ตรวจสอบข้อมูลบังคับ
 if (empty($full_name)) {
-    header("Location: edit_profile.php?status=error&message=" . urlencode("กรุณากรอกชื่อ-สกุล"));
+    header("Location: ../profile.php?status=error&message=" . urlencode("กรุณากรอกชื่อ-สกุล"));
     exit;
 }
 
@@ -48,11 +48,11 @@ try {
     $_SESSION['student_full_name'] = $full_name;
 
     // 7. บันทึกสำเร็จ! ส่งกลับไปหน้าเดิมพร้อมข้อความ
-    header("Location: edit_profile.php?status=success");
+    header("Location: ../profile.php?status=success");
     exit;
 
 } catch (PDOException $e) {
-    header("Location: edit_profile.php?status=error&message=" . urlencode($e->getMessage())); // ◀️ (แก้ไข)
+    header("Location: ../profile.php?status=error&message=" . urlencode($e->getMessage())); // ◀️ (แก้ไข)
     exit;
 }
 ?>
