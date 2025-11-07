@@ -3,10 +3,10 @@
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 @session_start(); 
-include('includes/check_student_session.php'); // (◀️ เปิดยาม)
+include(ROOT_PATH . '/includes/check_student_session.php'); // (◀️ เปิดยาม)
 // (⚠️ ลบส่วน Development Mode ออกแล้ว ⚠️)
 
-require_once('db_connect.php'); //
+require_once(ROOT_PATH . '/includes/db_connect.php'); //
 
 // 2. ดึง ID ของผู้ใช้งาน
 $student_id = $_SESSION['student_id']; 
@@ -32,7 +32,7 @@ try {
 // 4. ตั้งค่าตัวแปรสำหรับ Header
 $page_title = "ประวัติคำขอ";
 $active_page = 'history'; // ◀️ (สำคัญ) บอก Footer ว่าเมนูไหน Active
-include('includes/student_header.php');
+include(ROOT_PATH . '/includes/student_header.php');
 ?>
 
 <div class="main-container">
@@ -105,5 +105,5 @@ include('includes/student_header.php');
 
 <?php
 // 5. เรียกใช้ Footer
-include('includes/student_footer.php'); 
+include(ROOT_PATH . '/includes/student_footer.php'); 
 ?>

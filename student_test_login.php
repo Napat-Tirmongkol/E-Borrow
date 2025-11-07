@@ -69,7 +69,7 @@ require_once('includes/student_header.php');
         รหัสทดสอบไม่ถูกต้อง!
     </div>
 
-    <form action="student_test_login_process.php" method="POST">
+    <form action="process/student_test_login_process.php" method="POST">
         <div>
             <input type="password" name="test_code" placeholder="กรอกรหัสทดสอบ" required>
         </div>
@@ -77,7 +77,7 @@ require_once('includes/student_header.php');
     </form>
     
     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-    <a href="line_login.php">กลับไปหน้าล็อกอินปกติ (LINE)</a>
+    <a href="login.php">กลับไปหน้าล็อกอินปกติ (LINE)</a>
 </div>
 
 <?php 

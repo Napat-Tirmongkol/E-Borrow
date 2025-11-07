@@ -2,9 +2,9 @@
 // line_callback.php (เวอร์ชันอัปเกรต: เช็ค 2 ตาราง)
 
 session_start();
-require_once('line_config.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+require_once(__DIR__ . '/includes/line_config.php');
+require_once(__DIR__ . '/includes/db_connect.php');
+require_once(__DIR__ . '/includes/log_function.php');
 
 // --- (ฟังก์ชัน die_with_error ... เหมือนเดิม) ---
 function die_with_error($message) {
@@ -14,7 +14,7 @@ function die_with_error($message) {
             <div style='background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;'>
                 <h1 style='color: #dc3545;'>เกิดข้อผิดพลาด</h1>
                 <p>" . htmlspecialchars($message) . "</p>
-                <a href='line_login.php'>กลับไปหน้า Login</a>
+                <a href='login.php'>กลับไปหน้า Login</a>
             </div>
         </body>
     ";
@@ -89,7 +89,7 @@ try {
         log_action($pdo, $staff_user['id'], 'login_line', $log_desc);
         
         // ส่งไปหน้า Dashboard "Admin"
-        header("Location: index.php"); 
+        header("Location: admin/index.php"); 
         exit;
     }
     
@@ -108,7 +108,7 @@ try {
         $_SESSION['user_role'] = $student['status'];
 
         // ส่งไปหน้า Dashboard "ผู้ใช้งาน"
-        header("Location: student_dashboard.php"); 
+        header("Location: index.php"); 
         exit;
 
     } else {

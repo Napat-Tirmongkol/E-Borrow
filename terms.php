@@ -13,7 +13,7 @@ if (!$is_ajax) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ข้อตกลงการใช้งาน - MedLoan</title>
-    <link rel="stylesheet" href="CSS/style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body style="background-color: var(--color-page-bg);">
     <div class="profile-container" style="max-width: 800px; margin-top: 30px; margin-bottom: 30px;">

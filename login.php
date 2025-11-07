@@ -1,19 +1,22 @@
 <?php
-// line_login.php
+// login.php (เดิมคือ line_login.php)
 // หน้าสำหรับเลือกประเภทการ Login
 
-require_once('line_config.php');
+// ◀️ (แก้ไข) แก้ไข Path นี้ครับ
+require_once('includes/line_config.php');
+// ◀️ (ลบ) ลบบรรทัด 'require_once' ที่ค้างอยู่ออกครับ
 
-// (โค้ด PHP ... เหมือนเดิม ...)
 session_start();
 if (empty($_SESSION['line_login_state'])) {
     $_SESSION['line_login_state'] = bin2hex(random_bytes(16));
 }
 $state = $_SESSION['line_login_state'];
+
+// (สร้าง URL สำหรับ LINE Login)
 $line_login_url = "https://access.line.me/oauth2/v2.1/authorize?" . http_build_query([
     'response_type' => 'code',
     'client_id' => LINE_LOGIN_CHANNEL_ID,
-    'redirect_uri' => LINE_LOGIN_CALLBACK_URL,
+    'redirect_uri' => LINE_LOGIN_CALLBACK_URL, // (ค่านี้มาจาก line_config.php)
     'state' => $state,
     'scope' => 'profile openid'
 ]);
@@ -24,8 +27,10 @@ $line_login_url = "https://access.line.me/oauth2/v2.1/authorize?" . http_build_q
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ - ระบบยืมคืนอุปกรณ์</title>
-    <link rel="stylesheet" href="CSS/style.css"> 
-    <style>
+    
+    <link rel="stylesheet" href="assets/css/style.css">
+    
+     <style>
         :root { /* (ใส่ตัวแปรสีสำรองไว้ เผื่อ style.css โหลดไม่ทัน) */
             --color-primary: #0B6623;
             --color-page-bg: #B7E5CD;

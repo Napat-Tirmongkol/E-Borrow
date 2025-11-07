@@ -7,6 +7,6 @@ session_unset();
 session_destroy();
 
 // 2. ส่งผู้ใช้กลับไปหน้า Login ของ LINE
-header("Location: line_login.php");
+header("Location: login.php");
 exit;
 ?>

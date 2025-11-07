@@ -4,7 +4,7 @@
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 @session_start(); 
 include('includes/check_student_session.php'); // (◀️ เปิดยาม)
-require_once('db_connect.php'); //
+require_once('includes/db_connect.php'); //
 
 // 2. ดึง ID นักศึกษาจาก Session
 $student_id = $_SESSION['student_id']; 
@@ -16,7 +16,7 @@ try {
     $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$user_data) {
         // (ถ้าหา ID ไม่เจอ ให้เด้งออก)
-        header("Location: student_logout.php");
+        header("Location: logout.php");
         exit;
     }
 } catch (PDOException $e) {
@@ -54,7 +54,7 @@ include('includes/student_header.php');
         <h2 class="section-title">ตั้งค่าโปรไฟล์</h2>
         <p class="text-muted">คุณสามารถแก้ไขข้อมูลส่วนตัวของคุณได้ที่นี่ (ข้อมูลสถานภาพจะถูกใช้โดย Admin เท่านั้น)</p>
         
-        <form action="edit_profile_process.php" method="POST" id="profileForm">
+        <form action="process/edit_profile_process.php" method="POST" id="profileForm">
             
             <div class="form-group">
                 <label for="full_name">ชื่อ-นามสกุล <span style="color:red;">*</span></label>

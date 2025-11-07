@@ -2,10 +2,8 @@
 // borrow_list.php (อัปเดตสำหรับ V5 - ใช้ Types)
 
 @session_start(); 
-include('includes/check_student_session.php'); // (◀️ เพิ่มยามเข้ามา)
-// (⚠️ ลบส่วน Development Mode ออกแล้ว ⚠️)
-
-require_once('db_connect.php');
+include('includes/check_student_session.php'); 
+require_once('includes/db_connect.php');
 
 $student_id = $_SESSION['student_id']; 
 
@@ -189,8 +187,7 @@ function openRequestPopup(typeId, typeName) { // ◀️ (แก้ไข) เป
         text: 'กรุณารอสักครู่',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
-    });
-    fetch(`get_staff_list.php`)
+    }); fetch(`get_staff_list.php`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') {
@@ -248,7 +245,7 @@ function openRequestPopup(typeId, typeName) { // ◀️ (แก้ไข) เป
                         return false;
                     }
                     
-                    return fetch('request_borrow_process.php', { 
+                    return fetch('request_borrow_process.php', {
                         method: 'POST',
                         body: new FormData(form)
                     })
@@ -266,7 +263,7 @@ function openRequestPopup(typeId, typeName) { // ◀️ (แก้ไข) เป
             }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire('ส่งคำขอสำเร็จ!', 'คำขอของคุณถูกส่งไปให้ Admin พิจารณาแล้ว', 'success')
-                    .then(() => location.href = 'request_history.php'); 
+                    .then(() => location.href = 'history.php'); 
                 }
             });
         })
