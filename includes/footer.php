@@ -5,19 +5,20 @@
 $current_page = $current_page ?? 'index'; 
 ?>
 
-</main> <nav class="footer-nav">
+</main> 
+<nav class="footer-nav">
     
-    <a href="index.php" class="<?php echo ($current_page == 'index') ? 'active' : ''; ?>">
+    <a href="admin/index.php" class="<?php echo ($current_page == 'index') ? 'active' : ''; ?>">
         <i class="fas fa-tachometer-alt"></i>
         ภาพรวม
     </a>
     
-    <a href="return_dashboard.php" class="<?php echo ($current_page == 'return') ? 'active' : ''; ?>">
+    <a href="admin/return_dashboard.php" class="<?php echo ($current_page == 'return') ? 'active' : ''; ?>">
         <i class="fas fa-undo-alt"></i>
         คืนอุปกรณ์
     </a>
     
-    <a href="manage_equipment.php" class="<?php echo ($current_page == 'manage_equip') ? 'active' : ''; ?>">
+    <a href="admin/manage_equipment.php" class="<?php echo ($current_page == 'manage_equip') ? 'active' : ''; ?>">
         <i class="fas fa-tools"></i>
         จัดการอุปกรณ์
     </a>
@@ -27,22 +28,22 @@ $current_page = $current_page ?? 'index';
     if (isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): 
     ?>
     
-    <a href="manage_students.php" class="<?php echo ($current_page == 'manage_user') ? 'active' : ''; ?>">
+    <a href="admin/manage_students.php" class="<?php echo ($current_page == 'manage_user') ? 'active' : ''; ?>">
         <i class="fas fa-users-cog"></i>
         จัดการผู้ใช้
     </a>
     
-    <a href="manage_fines.php" class="<?php echo ($current_page == 'manage_fines') ? 'active' : ''; ?>">
+    <a href="admin/manage_fines.php" class="<?php echo ($current_page == 'manage_fines') ? 'active' : ''; ?>">
         <i class="fas fa-file-invoice-dollar"></i>
         จัดการค่าปรับ
     </a>
     
-    <a href="report_borrowed.php" class="<?php echo ($current_page == 'report') ? 'active' : ''; ?>">
+    <a href="admin/report_borrowed.php" class="<?php echo ($current_page == 'report') ? 'active' : ''; ?>">
         <i class="fas fa-chart-line"></i>
         รายงาน
     </a>
     
-    <a href="admin_log.php" class="<?php echo ($current_page == 'admin_log') ? 'active' : ''; ?>">
+    <a href="admin/admin_log.php" class="<?php echo ($current_page == 'admin_log') ? 'active' : ''; ?>">
         <i class="fas fa-history"></i>
         Log Admin
     </a>
@@ -52,11 +53,14 @@ $current_page = $current_page ?? 'index';
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// (JS ทั้งหมดนี้จะทำงานสัมพันธ์กับ <base href="/e_Borrow_test/"> ที่เราตั้งใน header.php)
 
 // (ฟังก์ชัน "ยืม")
-function openBorrowPopup(typeId) { // (เปลี่ยนเป็น typeId)
+function openBorrowPopup(typeId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    fetch(`get_borrow_form_data.php?type_id=${typeId}`) // (เปลี่ยน URL)
+    
+    // ◀️ (แก้ไข) เพิ่ม "ajax/" (ไม่ต้องใช้ ../) ◀️
+    fetch(`ajax/get_borrow_form_data.php?type_id=${typeId}`) 
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
@@ -103,7 +107,8 @@ function openBorrowPopup(typeId) { // (เปลี่ยนเป็น typeId)
                          Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                          return false;
                     }
-                    return fetch('borrow_process.php', { method: 'POST', body: new FormData(form) })
+                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                    return fetch('process/borrow_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
                             if (data.status !== 'success') throw new Error(data.message);
@@ -149,7 +154,8 @@ function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์�
                 Swal.showValidationMessage('กรุณากรอกชื่อประเภทอุปกรณ์');
                 return false;
             }
-            return fetch('add_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (แก้ URL)
+            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+            return fetch('process/add_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (แก้ URL)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -166,7 +172,9 @@ function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์�
 // 2. ฟังก์ชัน "แก้ไข" (อัปเดตสำหรับ File Upload)
 function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่อและ parameter)
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    fetch(`get_equipment_type_data.php?id=${typeId}`) // (เปลี่ยน URL)
+    
+    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
+    fetch(`ajax/get_equipment_type_data.php?id=${typeId}`) // (เปลี่ยน URL)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
@@ -178,8 +186,9 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
                     <i class="fas fa-camera"></i>
                 </div>`;
             if (type.image_url) {
+                // ◀️ (แก้ไข) Path รูปภาพถูกต้องแล้ว (เพราะ <base href> และ DB Path ถูกแก้แล้ว) ◀️
                 imagePreviewHtml = `
-                    <img src="${type.image_url}" 
+                    <img src="${type.image_url}?t=${new Date().getTime()}" 
                          alt="รูปตัวอย่าง" 
                          style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 15px;"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
@@ -226,7 +235,8 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
                         Swal.showValidationMessage('กรุณากรอกชื่อประเภทอุปกรณ์');
                         return false;
                     }
-                    return fetch('edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (เปลี่ยน URL)
+                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                    return fetch('process/edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (เปลี่ยน URL)
                         .then(response => response.json())
                         .then(data => {
                             if (data.status !== 'success') throw new Error(data.message);
@@ -253,7 +263,9 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
 // 3. ฟังก์ชัน "รับคืน"
 function openReturnPopup(equipmentId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูลการยืม...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    fetch(`get_return_form_data.php?id=${equipmentId}`)
+    
+    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
+    fetch(`ajax/get_return_form_data.php?id=${equipmentId}`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
@@ -287,7 +299,8 @@ function openReturnPopup(equipmentId) {
                 cancelButtonColor: '#d33',
                 preConfirm: () => {
                     const form = document.getElementById('swalReturnForm');
-                    return fetch('return_process.php', { method: 'POST', body: new FormData(form) })
+                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                    return fetch('process/return_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
                             if (data.status !== 'success') throw new Error(data.message);
@@ -323,7 +336,8 @@ function openApprovePopup(transactionId) {
             const formData = new FormData();
             formData.append('transaction_id', transactionId);
 
-            fetch('approve_request_process.php', {
+            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+            fetch('process/approve_request_process.php', {
                 method: 'POST',
                 body: formData
             })
@@ -359,7 +373,8 @@ function openRejectPopup(transactionId) {
             const formData = new FormData();
             formData.append('transaction_id', transactionId);
 
-            fetch('reject_request_process.php', {
+            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+            fetch('process/reject_request_process.php', {
                 method: 'POST',
                 body: formData
             })
@@ -478,7 +493,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // (3) ป้องกันไม่ให้หน้าเว็บรีเฟรช (นี่คือหัวใจของ AJAX)
             event.preventDefault(); 
             
-            const url = new URL(paginationLink.href);
+            // ◀️ (แก้ไข) Path นี้ถูกต้องแล้วเพราะ <base href> ◀️
+            const url = new URL(paginationLink.href); 
             
             // (4) เพิ่ม parameter 'ajax=1' เพื่อบอก PHP ว่าเราต้องการแค่ตาราง
             url.searchParams.set('ajax', '1'); 
@@ -529,7 +545,8 @@ function confirmDeleteItem(itemId, typeId) {
             formData.append('item_id', itemId);
             formData.append('type_id', typeId); // (ส่ง type_id ไปด้วย)
 
-            fetch('delete_item_process.php', {
+            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+            fetch('process/delete_item_process.php', {
                 method: 'POST',
                 body: formData
             })
@@ -553,7 +570,8 @@ function openEditItemPopup(itemId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', didOpen: () => { Swal.showLoading(); } });
     
     // 1. ดึงข้อมูลเดิม
-    fetch(`get_item_data.php?id=${itemId}`)
+    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
+    fetch(`ajax/get_item_data.php?id=${itemId}`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
@@ -599,7 +617,8 @@ function openEditItemPopup(itemId) {
                         Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                         return false;
                     }
-                    return fetch('edit_item_process.php', { method: 'POST', body: new FormData(form) })
+                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+                    return fetch('process/edit_item_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
                             if (data.status !== 'success') throw new Error(data.message);
@@ -647,7 +666,8 @@ function openAddItemPopup(typeId, typeName) {
                 Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                 return false;
             }
-            return fetch('add_item_process.php', { method: 'POST', body: new FormData(form) })
+            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
+            return fetch('process/add_item_process.php', { method: 'POST', body: new FormData(form) })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -672,7 +692,8 @@ function openManageItemsPopup(typeId) {
         didOpen: () => { Swal.showLoading(); }
     });
 
-    fetch(`get_items_for_type.php?type_id=${typeId}`)
+    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
+    fetch(`ajax/get_items_for_type.php?type_id=${typeId}`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
@@ -754,119 +775,6 @@ function openManageItemsPopup(typeId) {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         });
 }
-
-function confirmDeleteItem(itemId, typeId) {
-    Swal.fire({
-        title: "คุณแน่ใจหรือไม่?",
-        text: "คุณกำลังจะลบอุปกรณ์ชิ้นนี้ออกจากระบบอย่างถาวร (จะลบได้ต่อเมื่อสถานะไม่ใช่ 'ถูกยืม' เท่านั้น)",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "ใช่, ลบเลย",
-        cancelButtonText: "ยกเลิก"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            
-            const formData = new FormData();
-            formData.append('item_id', itemId);
-            formData.append('type_id', typeId); // (ส่ง type_id ไปด้วย)
-
-            fetch('delete_item_process.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    Swal.fire('ลบสำเร็จ!', data.message, 'success')
-                    .then(() => {
-                        Swal.close();
-                        openManageItemsPopup(typeId);
-                    });
-                } else {
-                    Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
-                }
-            })
-            .catch(error => {
-                Swal.fire('เกิดข้อผิดพลาด AJAX', error.message, 'error');
-            });
-        }
-    });
-}
-
-function openEditItemPopup(itemId) {
-    Swal.fire({ title: 'กำลังโหลดข้อมูล...', didOpen: () => { Swal.showLoading(); } });
-    
-    // 1. ดึงข้อมูลเดิม
-    fetch(`get_item_data.php?id=${itemId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.status !== 'success') throw new Error(data.message);
-            const item = data.item;
-
-            // 2. สร้างตัวเลือกสถานะ
-            const statusOptions = `
-                <option value="available" ${item.status === 'available' ? 'selected' : ''}>ว่าง (Available)</option>
-                <option value="maintenance" ${item.status === 'maintenance' ? 'selected' : ''}>ซ่อมบำรุง (Maintenance)</option>
-            `;
-
-            // 3. แสดง Popup
-            Swal.fire({
-                title: '🔧 แก้ไขอุปกรณ์รายชิ้น (ID: ' + item.id + ')',
-                html: `
-                <form id="swalEditItemForm" style="text-align: left; margin-top: 20px;">
-                    <input type="hidden" name="item_id" value="${item.id}">
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label for="swal_item_name" style="font-weight: bold; display: block; margin-bottom: 5px;">ชื่อเฉพาะ:</label>
-                        <input type="text" name="name" id="swal_item_name" value="${item.name}" required style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label for="swal_item_serial" style="font-weight: bold; display: block; margin-bottom: 5px;">เลขซีเรียล (Serial Number):</label>
-                        <input type="text" name="serial_number" id="swal_item_serial" value="${item.serial_number || ''}" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label for="swal_item_desc" style="font-weight: bold; display: block; margin-bottom: 5px;">รายละเอียด/หมายเหตุ:</label>
-                        <textarea name="description" id="swal_item_desc" rows="2" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">${item.description || ''}</textarea>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label for="swal_item_status" style="font-weight: bold; display: block; margin-bottom: 5px;">สถานะ:</label>
-                        <select name="status" id="swal_item_status" required style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                            ${statusOptions}
-                        </select>
-                    </div>
-                </form>`,
-                showCancelButton: true,
-                confirmButtonText: 'บันทึกการเปลี่ยนแปลง',
-                preConfirm: () => {
-                    const form = document.getElementById('swalEditItemForm');
-                    if (!form.checkValidity()) {
-                        Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
-                        return false;
-                    }
-                    return fetch('edit_item_process.php', { method: 'POST', body: new FormData(form) })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status !== 'success') throw new Error(data.message);
-                            return data;
-                        })
-                        .catch(error => { Swal.showValidationMessage(`เกิดข้อผิดพลาด: ${error.message}`); });
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลอุปกรณ์เรียบร้อย', 'success').then(() => {
-                        Swal.close();
-                        openManageItemsPopup(item.type_id);
-                    });
-                }
-            });
-        })
-        .catch(error => {
-            Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
-        });
-}
-
 </script>
 
 </body>

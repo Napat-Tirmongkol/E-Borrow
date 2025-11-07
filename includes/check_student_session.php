@@ -12,7 +12,7 @@ if (empty($_SESSION['student_id'])) {
     //    (ห้ามทำลาย Session เพราะอาจจะแค่กำลังโหลดช้า)
     
     // 4. ส่งกลับไปหน้า Login
-    header("Location: line_login.php");
+    header("Location: login.php");
     exit; // จบการทำงาน
 }
 

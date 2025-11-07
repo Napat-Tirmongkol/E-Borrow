@@ -6,7 +6,7 @@ if (!isset($_SESSION['user_id'])) {
     
     // 3. ถ้ายังไม่มี (ยังไม่ Log in)
     //    ให้ส่งกลับไปหน้า Log in ทันที
-    header("Location: login.php");
+    header("Location: ../admin/login.php");
     exit; // จบการทำงานของสคริปต์ทันที
 }
 
