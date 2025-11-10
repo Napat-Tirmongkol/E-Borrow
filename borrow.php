@@ -29,7 +29,7 @@ $active_page = 'borrow';
 include('includes/student_header.php');
 ?>
 
-<div class="main-container">
+<main class="main-container">
 
     <div class="filter-row">
         
@@ -181,13 +181,13 @@ function escapeJS(str) {
 }
 
 // (JS สำหรับ Popup ยืมของ)
-function openRequestPopup(typeId, typeName) { // ◀️ (แก้ไข) เปลี่ยนชื่อตัวแปรเป็น typeId
+function openRequestPopup(typeId, typeName) { 
     Swal.fire({
         title: 'กำลังโหลดข้อมูล...',
         text: 'กรุณารอสักครู่',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
-    }); fetch(`get_staff_list.php`)
+    }); fetch(`ajax/get_staff_list.php`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') {
@@ -245,7 +245,7 @@ function openRequestPopup(typeId, typeName) { // ◀️ (แก้ไข) เป
                         return false;
                     }
                     
-                    return fetch('request_borrow_process.php', {
+                    return fetch('process/request_borrow_process.php', {
                         method: 'POST',
                         body: new FormData(form)
                     })

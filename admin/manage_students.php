@@ -1,8 +1,8 @@
 <?php
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 // ◀️ (แก้ไข) เพิ่ม ../ ◀️
-include('../includes/check_session.php');
-require_once('../includes/db_connect.php'); 
+include('../includes/check_session.php'); 
+require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
@@ -369,8 +369,9 @@ include('../includes/header.php');
     </div>
 </div>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // ◀️ (แก้ไข) แก้ไข Path ของ fetch ทั้งหมด ◀️
+    // ✅ (แก้ไข) แก้ไข Path ของ fetch ทั้งหมด (ลบ ../ ออก) ◀️
 
     function confirmDeleteStudent(event, id) {
         event.preventDefault();
@@ -387,8 +388,8 @@ include('../includes/header.php');
             if (result.isConfirmed) {
                 const formData = new FormData();
                 formData.append('id', id);
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                fetch('../process/delete_student_process.php', {
+                
+                fetch('process/delete_student_process.php', { // ✅
                     method: 'POST',
                     body: formData
                 })
@@ -434,8 +435,8 @@ include('../includes/header.php');
                     Swal.showValidationMessage('กรุณากรอก ชื่อ-สกุล ผู้ใช้งาน');
                     return false;
                 }
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                return fetch('../process/add_student_process.php', {
+                
+                return fetch('process/add_student_process.php', { // ✅
                         method: 'POST',
                         body: new FormData(form)
                     })
@@ -450,8 +451,7 @@ include('../includes/header.php');
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // (Path ถูกต้องแล้ว เพราะเป็นไฟล์เดียวกัน)
-                Swal.fire('บันทึกสำเร็จ!', 'เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว', 'success').then(() => location.href = 'manage_students.php?add=success');
+                Swal.fire('บันทึกสำเร็จ!', 'เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว', 'success').then(() => location.href = 'admin/manage_students.php?add=success');
             }
         });
     }
@@ -476,17 +476,15 @@ include('../includes/header.php');
                 Swal.showLoading();
             }
         });
-        // ◀️ (แก้ไข) เพิ่ม ../ajax/ ◀️
-        fetch(`../ajax/get_student_data.php?id=${studentId}`)
+        
+        fetch(`ajax/get_student_data.php?id=${studentId}`) // ✅
             .then(response => response.json())
             .then(data => {
                 if (data.status !== 'success') throw new Error(data.message);
                 const student = data.student;
 
-                // (ใหม่) เช็คสถานะ "อื่นๆ" สำหรับการแสดงผลครั้งแรก
                 const otherStatusDisplay = (student.status === 'other') ? 'block' : 'none';
 
-                // ◀️ (แก้ไข) อัปเกรด formHtml ให้มีทุกช่อง ◀️
                 const formHtml = `
                 <form id="swalEditStudentForm" style="text-align: left; margin-top: 20px;">
                     <input type="hidden" name="student_id" value="${student.id}">
@@ -541,7 +539,6 @@ include('../includes/header.php');
                         const status = form.querySelector('#swal_edit_status').value;
                         const statusOther = form.querySelector('#swal_edit_status_other').value;
 
-                        // (อัปเดต Validation)
                         if (!fullName || !status) {
                             Swal.showValidationMessage('กรุณากรอกช่องที่มีเครื่องหมาย * ให้ครบถ้วน');
                             return false;
@@ -550,10 +547,8 @@ include('../includes/header.php');
                             Swal.showValidationMessage('กรุณาระบุสถานภาพ "อื่นๆ"');
                             return false;
                         }
-                        // (จบส่วน Validation)
-
-                        // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                        return fetch('../process/edit_student_process.php', {
+                        
+                        return fetch('process/edit_student_process.php', { // ✅
                                 method: 'POST',
                                 body: new FormData(form)
                             })
@@ -568,8 +563,7 @@ include('../includes/header.php');
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // (Path ถูกต้องแล้ว)
-                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลผู้ใช้งานเรียบร้อย', 'success').then(() => location.href = 'manage_students.php?edit=success');
+                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลผู้ใช้งานเรียบร้อย', 'success').then(() => location.href = 'admin/manage_students.php?edit=success');
                     }
                 });
             })
@@ -618,8 +612,8 @@ include('../includes/header.php');
                     Swal.showValidationMessage('กรุณากรอก Username และ Password');
                     return false;
                 }
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                return fetch('../process/promote_student_process.php', {
+                
+                return fetch('process/promote_student_process.php', { // ✅
                         method: 'POST',
                         body: new FormData(form)
                     })
@@ -634,8 +628,7 @@ include('../includes/header.php');
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // (Path ถูกต้องแล้ว)
-                Swal.fire('เลื่อนขั้นสำเร็จ!', 'ผู้ใช้งานนี้กลายเป็นพนักงานแล้ว', 'success').then(() => location.href = 'manage_students.php?promote=success');
+                Swal.fire('เลื่อนขั้นสำเร็จ!', 'ผู้ใช้งานนี้กลายเป็นพนักงานแล้ว', 'success').then(() => location.href = 'admin/manage_students.php?promote=success');
             }
         });
     }
@@ -654,8 +647,8 @@ include('../includes/header.php');
             if (result.isConfirmed) {
                 const formData = new FormData();
                 formData.append('user_id_to_demote', userId);
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                fetch('../process/demote_staff_process.php', {
+                
+                fetch('process/demote_staff_process.php', { // ✅
                         method: 'POST',
                         body: formData
                     })
@@ -663,7 +656,7 @@ include('../includes/header.php');
                     .then(data => {
                         if (data.status === 'success') {
                             Swal.fire('ลดสิทธิ์สำเร็จ!', data.message, 'success')
-                                .then(() => location.href = 'manage_students.php?staff_op=success'); // (Path ถูกต้อง)
+                                .then(() => location.href = 'admin/manage_students.php?staff_op=success');
                         } else {
                             Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
                         }
@@ -689,8 +682,8 @@ include('../includes/header.php');
             if (result.isConfirmed) {
                 const formData = new FormData();
                 formData.append('user_id_to_delete', userId);
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                fetch('../process/delete_staff_process.php', {
+                
+                fetch('process/delete_staff_process.php', { // ✅
                         method: 'POST',
                         body: formData
                     })
@@ -698,7 +691,7 @@ include('../includes/header.php');
                     .then(data => {
                         if (data.status === 'success') {
                             Swal.fire('ลบสำเร็จ!', data.message, 'success')
-                                .then(() => location.href = 'manage_students.php?staff_op=success'); // (Path ถูกต้อง)
+                                .then(() => location.href = 'admin/manage_students.php?staff_op=success');
                         } else {
                             Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
                         }
@@ -732,6 +725,7 @@ include('../includes/header.php');
                     <label for="swal_s_role" style="font-weight: bold; display: block; margin-bottom: 5px;">สิทธิ์ (Role): <span style="color:red;">*</span></label>
                     <select name="role" id="swal_s_role" required style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
                         <option value="employee">พนักงาน (Employee)</option>
+                        <option value="editor">พนักงาน (Editor - จัดการอุปกรณ์)</option>
                         <option value="admin">ผู้ดูแลระบบ (Admin)</option>
                     </select>
                 </div>
@@ -747,8 +741,8 @@ include('../includes/header.php');
                     Swal.showValidationMessage('กรุณากรอกข้อมูล * ให้ครบถ้วน');
                     return false;
                 }
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                return fetch('../process/add_staff_process.php', {
+                
+                return fetch('process/add_staff_process.php', { // ✅
                         method: 'POST',
                         body: new FormData(form)
                     })
@@ -763,8 +757,7 @@ include('../includes/header.php');
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // (Path ถูกต้อง)
-                Swal.fire('บันทึกสำเร็จ!', 'เพิ่มบัญชีพนักงานใหม่เรียบร้อย', 'success').then(() => location.href = 'manage_students.php?staff_op=success');
+                Swal.fire('บันทึกสำเร็จ!', 'เพิ่มบัญชีพนักงานใหม่เรียบร้อย', 'success').then(() => location.href = 'admin/manage_students.php?staff_op=success');
             }
         });
     }
@@ -777,8 +770,7 @@ include('../includes/header.php');
             }
         });
 
-        // ◀️ (แก้ไข) เพิ่ม ../ajax/ ◀️
-        fetch(`../ajax/get_staff_data.php?id=${userId}`)
+        fetch(`ajax/get_staff_data.php?id=${userId}`) // ✅
             .then(response => response.json())
             .then(data => {
                 if (data.status !== 'success') throw new Error(data.message);
@@ -804,6 +796,7 @@ include('../includes/header.php');
                         <label for="swal_e_role" style="font-weight: bold; display: block; margin-bottom: 5px;">สิทธิ์ (Role): <span style="color:red;">*</span></label>
                         <select name="role" id="swal_e_role" required ${disabled_attr} style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd; background-color: ${is_linked ? '#f4f4f4' : '#fff'};">
                             <option value="employee" ${staff.role == 'employee' ? 'selected' : ''}>พนักงาน (Employee)</option>
+                            <option value="editor" ${staff.role == 'editor' ? 'selected' : ''}>พนักงาน (Editor - จัดการอุปกรณ์)</option>
                             <option value="admin" ${staff.role == 'admin' ? 'selected' : ''}>ผู้ดูแลระบบ (Admin)</option>
                         </select>
                     </div>
@@ -828,8 +821,8 @@ include('../includes/header.php');
                             Swal.showValidationMessage('กรุณากรอกข้อมูล * ให้ครบถ้วน');
                             return false;
                         }
-                        // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                        return fetch('../process/edit_staff_process.php', {
+                        
+                        return fetch('process/edit_staff_process.php', { // ✅
                                 method: 'POST',
                                 body: new FormData(form)
                             })
@@ -844,8 +837,7 @@ include('../includes/header.php');
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // (Path ถูกต้อง)
-                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลบัญชีเรียบร้อย', 'success').then(() => location.href = 'manage_students.php?staff_op=success');
+                        Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลบัญชีเรียบร้อย', 'success').then(() => location.href = 'admin/manage_students.php?staff_op=success');
                     }
                 });
             })
@@ -874,8 +866,7 @@ include('../includes/header.php');
                 formData.append('user_id', userId);
                 formData.append('new_status', newStatus);
 
-                // ◀️ (แก้ไข) เพิ่ม ../process/ ◀️
-                fetch('../process/toggle_staff_status.php', {
+                fetch('process/toggle_staff_status.php', { // ✅
                         method: 'POST',
                         body: formData
                     })
@@ -883,7 +874,7 @@ include('../includes/header.php');
                     .then(data => {
                         if (data.status === 'success') {
                             Swal.fire('สำเร็จ!', data.message, 'success')
-                                .then(() => location.href = 'manage_students.php?staff_op=success'); // (Path ถูกต้อง)
+                                .then(() => location.href = 'admin/manage_students.php?staff_op=success');
                         } else {
                             Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
                         }
@@ -898,18 +889,14 @@ include('../includes/header.php');
 
         const ctx = document.getElementById('userRoleChart').getContext('2d');
 
-        // (2) (แก้ไข) ดึงข้อมูล PHP ที่เรานับแยกตามสถานะ
         const statusData = <?php echo json_encode($status_counts); ?>;
 
-        // (3) ตรวจสอบ Dark Mode (เหมือนกราฟใน index.php)
         const isDarkMode = document.body.classList.contains('dark-mode');
         const chartTextColor = isDarkMode ? '#E5E7EB' : '#6C757D';
 
-        // (4) สร้างกราฟ (แบบ Doughnut)
         const userRoleChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                // (แก้ไข) เปลี่ยน Labels
                 labels: [
                     'นักศึกษา (student)',
                     'อาจารย์ (teacher)',
@@ -918,14 +905,12 @@ include('../includes/header.php');
                 ],
                 datasets: [{
                     label: 'จำนวน (คน)',
-                    // (แก้ไข) เปลี่ยน Data
                     data: [
                         statusData.student,
                         statusData.teacher,
                         statusData.staff,
                         statusData.other
                     ],
-                    // (แก้ไข) เพิ่มสี
                     backgroundColor: [
                         'rgba(22, 163, 74, 0.7)', /* เขียว */
                         'rgba(59, 130, 246, 0.7)', /* น้ำเงิน */
@@ -947,14 +932,13 @@ include('../includes/header.php');
                     legend: {
                         position: 'top',
                         labels: {
-                            color: chartTextColor // (กำหนดสีตัวอักษร)
+                            color: chartTextColor
                         }
                     }
                 }
             }
         });
 
-        // (5) ทำให้กราฟเปลี่ยนสีตัวอักษร เมื่อกดปุ่ม Toggle
         try {
             const themeToggleBtn = document.getElementById('theme-toggle-btn');
             if (themeToggleBtn) {

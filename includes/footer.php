@@ -1,8 +1,9 @@
 <?php
-// includes/footer.php (อัปเกรด: เพิ่ม Footer Nav)
+// includes/footer.php (ฉบับสมบูรณ์ V3.2 - เพิ่ม Workflow ค่าปรับ+คืน)
 
 // (ตรวจสอบค่า $current_page ถ้าไม่มี ให้เป็น 'index')
 $current_page = $current_page ?? 'index'; 
+$user_role = $_SESSION['role'] ?? 'employee'; // (ดึง Role ปัจจุบัน)
 ?>
 
 </main> 
@@ -18,24 +19,28 @@ $current_page = $current_page ?? 'index';
         คืนอุปกรณ์
     </a>
     
+    <?php // (เมนูสำหรับ Admin และ Editor) ?>
+    <?php if (in_array($user_role, ['admin', 'editor'])): ?>
     <a href="admin/manage_equipment.php" class="<?php echo ($current_page == 'manage_equip') ? 'active' : ''; ?>">
         <i class="fas fa-tools"></i>
         จัดการอุปกรณ์
-    </a>
-
-    <?php 
-    // (เมนู 4, 5, 6 จะแสดงเฉพาะ Admin เท่านั้น)
-    if (isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): 
-    ?>
-    
-    <a href="admin/manage_students.php" class="<?php echo ($current_page == 'manage_user') ? 'active' : ''; ?>">
-        <i class="fas fa-users-cog"></i>
-        จัดการผู้ใช้
     </a>
     
     <a href="admin/manage_fines.php" class="<?php echo ($current_page == 'manage_fines') ? 'active' : ''; ?>">
         <i class="fas fa-file-invoice-dollar"></i>
         จัดการค่าปรับ
+    </a>
+    <?php endif; // (จบ Admin/Editor) ?>
+
+
+    <?php 
+    // (เมนูที่เหลือ จะแสดงเฉพาะ Admin เท่านั้น)
+    if ($user_role == 'admin'): 
+    ?>
+    
+    <a href="admin/manage_students.php" class="<?php echo ($current_page == 'manage_user') ? 'active' : ''; ?>">
+        <i class="fas fa-users-cog"></i>
+        จัดการผู้ใช้
     </a>
     
     <a href="admin/report_borrowed.php" class="<?php echo ($current_page == 'report') ? 'active' : ''; ?>">
@@ -55,11 +60,284 @@ $current_page = $current_page ?? 'index';
 <script>
 // (JS ทั้งหมดนี้จะทำงานสัมพันธ์กับ <base href="/e_Borrow_test/"> ที่เราตั้งใน header.php)
 
+// ✅ =========================================
+// (ใหม่) ฟังก์ชันสำหรับ "ชำระค่าปรับ" (ย้ายมาจาก manage_fines.php)
+// (เพิ่ม onSuccessCallback ที่ท้ายสุด)
+// =========================================
+
+// 1. Popup สำหรับ "ชำระเงินโดยตรง" (จากตารางที่ 1)
+function openDirectPaymentPopup(transactionId, studentId, studentName, equipName, daysOverdue, calculatedFine, onSuccessCallback = null) {
+    
+    // (Helper function)
+    const setupPaymentMethodToggle_Direct = () => {
+        try {
+            const cashRadio = Swal.getPopup().querySelector('#swal_pm_cash_1');
+            const bankRadio = Swal.getPopup().querySelector('#swal_pm_bank_1');
+            const slipGroup = Swal.getPopup().querySelector('#slipUploadGroup');
+            const slipInput = Swal.getPopup().querySelector('#swal_payment_slip');
+            const slipRequired = Swal.getPopup().querySelector('#slipRequired');
+
+            const toggleLogic = (method) => {
+                if (method === 'bank_transfer') {
+                    slipGroup.style.display = 'block'; slipInput.required = true; slipRequired.style.display = 'inline';
+                } else {
+                    slipGroup.style.display = 'none'; slipInput.required = false; slipRequired.style.display = 'none';
+                }
+            };
+            cashRadio.addEventListener('change', () => toggleLogic('cash'));
+            bankRadio.addEventListener('change', () => toggleLogic('bank_transfer'));
+            toggleLogic('cash');
+        } catch (e) { console.error('Swal Toggle Error:', e); }
+    };
+
+    Swal.fire({
+        title: '💵 บันทึกการชำระเงิน (เกินกำหนด)',
+        html: `
+        <div class="swal-info-box">
+            <p style="margin: 0;"><strong>ผู้ยืม:</strong> ${studentName}</p>
+            <p style="margin: 5px 0 0 0;"><strong>อุปกรณ์:</strong> ${equipName}</p>
+            <p style="margin: 5px 0 0 0;" class="swal-info-danger">
+                <strong>เกินกำหนด:</strong> ${daysOverdue} วัน
+            </p>
+        </div>
+        
+        <form id="swalDirectPaymentForm" style="text-align: left; margin-top: 20px;" enctype="multipart/form-data">
+            <input type="hidden" name="transaction_id" value="${transactionId}">
+            <input type="hidden" name="student_id" value="${studentId}">
+            <input type="hidden" name="amount" value="${calculatedFine.toFixed(2)}">
+            <input type="hidden" name="notes" value="เกินกำหนด ${daysOverdue} วัน">
+
+            <div style="margin-bottom: 15px;">
+                <label for="swal_amount_paid" style="font-weight: bold; display: block; margin-bottom: 5px;">จำนวนเงินที่รับชำระ: <span style="color:red;">*</span></label>
+                <input type="number" name="amount_paid" id="swal_amount_paid" value="${calculatedFine.toFixed(2)}" step="0.01" required 
+                       style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd; font-size: 1.2em; color: var(--color-primary); font-weight: bold;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">วิธีการชำระเงิน: <span style="color:red;">*</span></label>
+                <div style="display: flex; gap: 1rem;">
+                    <label style="font-weight: normal;">
+                        <input type="radio" name="payment_method" id="swal_pm_cash_1" value="cash" checked> เงินสด
+                    </label>
+                    <label style="font-weight: normal;">
+                        <input type="radio" name="payment_method" id="swal_pm_bank_1" value="bank_transfer"> บัญชีธนาคาร
+                    </label>
+                </div>
+            </div>
+
+            <div id="slipUploadGroup" style="display: none; margin-bottom: 15px;">
+                <label for="swal_payment_slip" style="font-weight: bold; display: block; margin-bottom: 5px;">แนบสลิปการโอน: <span id="slipRequired" style="color:red; display: none;">*</span></label>
+                <input type="file" name="payment_slip" id="swal_payment_slip" accept="image/*"
+                       style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+        </form>`,
+        didOpen: () => {
+            setupPaymentMethodToggle_Direct();
+        },
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันการชำระเงิน',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: 'var(--color-success)',
+        focusConfirm: false,
+        preConfirm: () => {
+            const form = document.getElementById('swalDirectPaymentForm');
+            const formData = new FormData(form); 
+            
+            const paymentMethod = formData.get('payment_method');
+            const slipFile = formData.get('payment_slip');
+
+            if (paymentMethod === 'bank_transfer' && (!slipFile || slipFile.size === 0)) {
+                Swal.showValidationMessage('กรุณาแนบสลิปการโอน');
+                return false;
+            }
+            
+            if (!form.checkValidity()) {
+                Swal.showValidationMessage('กรุณากรอกข้อมูล * ให้ครบถ้วน');
+                return false;
+            }
+            
+            return fetch('process/direct_payment_process.php', { method: 'POST', body: formData }) 
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'success') throw new Error(data.message);
+                    return data; 
+                })
+                .catch(error => { Swal.showValidationMessage(`เกิดข้อผิดพลาด: ${error.message}`); });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'ชำระเงินสำเร็จ!',
+                text: 'บันทึกการชำระเงินเรียบร้อย',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-print"></i> พิมพ์ใบเสร็จ',
+                cancelButtonText: 'ปิดหน้าต่าง',
+            }).then((finalResult) => {
+                if (finalResult.isConfirmed) {
+                    const newPaymentId = result.value.new_payment_id;
+                    window.open(`admin/print_receipt.php?payment_id=${newPaymentId}`, '_blank');
+                }
+                
+                // (เรียก Callback ถ้ามี)
+                if (onSuccessCallback) {
+                    onSuccessCallback(); 
+                } else {
+                    location.reload(); 
+                }
+            });
+        }
+    });
+}
+
+// 2. Popup สำหรับ "รับชำระเงิน" (จากตารางที่ 2 - สำหรับข้อมูลเก่า)
+function openRecordPaymentPopup(fineId, studentName, amountDue, onSuccessCallback = null) {
+    
+    // (Helper function)
+    const setupPaymentMethodToggle_Record = () => {
+        try {
+            const cashRadio = Swal.getPopup().querySelector('#swal_pm_cash_2');
+            const bankRadio = Swal.getPopup().querySelector('#swal_pm_bank_2');
+            const slipGroup = Swal.getPopup().querySelector('#slipUploadGroup');
+            const slipInput = Swal.getPopup().querySelector('#swal_payment_slip');
+            const slipRequired = Swal.getPopup().querySelector('#slipRequired');
+
+            const toggleLogic = (method) => {
+                if (method === 'bank_transfer') {
+                    slipGroup.style.display = 'block'; slipInput.required = true; slipRequired.style.display = 'inline';
+                } else {
+                    slipGroup.style.display = 'none'; slipInput.required = false; slipRequired.style.display = 'none';
+                }
+            };
+            cashRadio.addEventListener('change', () => toggleLogic('cash'));
+            bankRadio.addEventListener('change', () => toggleLogic('bank_transfer'));
+            toggleLogic('cash');
+        } catch (e) { console.error('Swal Toggle Error:', e); }
+    };
+
+    Swal.fire({
+        title: '💵 บันทึกการชำระเงิน',
+        html: `
+        <div class="swal-info-box">
+            <p style="margin: 0;"><strong>ผู้ยืม:</strong> ${studentName}</p>
+            <p style="margin: 5px 0 0 0;"><strong>ยอดค้างชำระ:</strong> ${amountDue.toFixed(2)} บาท</p>
+        </div>
+        <form id="swalPaymentForm" style="text-align: left; margin-top: 20px;" enctype="multipart/form-data">
+            <input type="hidden" name="fine_id" value="${fineId}">
+            
+            <div style="margin-bottom: 15px;">
+                <label for="swal_amount_paid" style="font-weight: bold; display: block; margin-bottom: 5px;">จำนวนเงินที่รับ: <span style="color:red;">*</span></label>
+                <input type="number" name="amount_paid" id="swal_amount_paid" value="${amountDue.toFixed(2)}" step="0.01" required 
+                       style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">วิธีการชำระเงิน: <span style="color:red;">*</span></label>
+                <div style="display: flex; gap: 1rem;">
+                    <label style="font-weight: normal;">
+                        <input type="radio" name="payment_method" id="swal_pm_cash_2" value="cash" checked> เงินสด
+                    </label>
+                    <label style="font-weight: normal;">
+                        <input type="radio" name="payment_method" id="swal_pm_bank_2" value="bank_transfer"> บัญชีธนาคาร
+                    </label>
+                </div>
+            </div>
+
+            <div id="slipUploadGroup" style="display: none; margin-bottom: 15px;">
+                <label for="swal_payment_slip" style="font-weight: bold; display: block; margin-bottom: 5px;">แนบสลิปการโอน: <span id="slipRequired" style="color:red; display: none;">*</span></label>
+                <input type="file" name="payment_slip" id="swal_payment_slip" accept="image/*"
+                       style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+        </form>`,
+        didOpen: () => {
+            setupPaymentMethodToggle_Record();
+        },
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันการชำระเงิน',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: 'var(--color-success)',
+        focusConfirm: false,
+        preConfirm: () => {
+            const form = document.getElementById('swalPaymentForm');
+            const formData = new FormData(form);
+
+            const paymentMethod = formData.get('payment_method');
+            const slipFile = formData.get('payment_slip');
+
+            if (paymentMethod === 'bank_transfer' && (!slipFile || slipFile.size === 0)) {
+                Swal.showValidationMessage('กรุณาแนบสลิปการโอน');
+                return false;
+            }
+
+            if (!form.checkValidity()) {
+                Swal.showValidationMessage('กรุณากรอกจำนวนเงิน');
+                return false;
+            }
+            return fetch('process/record_payment_process.php', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'success') throw new Error(data.message);
+                    return data; 
+                })
+                .catch(error => { Swal.showValidationMessage(`เกิดข้อผิดพลาด: ${error.message}`); });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'ชำระเงินสำเร็จ!',
+                text: 'บันทึกการชำระเงินเรียบร้อย',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-print"></i> พิมพ์ใบเสร็จ',
+                cancelButtonText: 'ปิดหน้าต่าง',
+            }).then((finalResult) => {
+                if (finalResult.isConfirmed) {
+                    const newPaymentId = result.value.new_payment_id;
+                    window.open(`admin/print_receipt.php?payment_id=${newPaymentId}`, '_blank');
+                }
+                
+                // (เรียก Callback ถ้ามี)
+                if (onSuccessCallback) {
+                    onSuccessCallback(); 
+                } else {
+                    location.reload(); 
+                }
+            });
+        }
+    });
+}
+
+// 3. ✅ (ใหม่) ฟังก์ชัน Wrapper สำหรับ Workflow ใหม่
+function openFineAndReturnPopup(transactionId, studentId, studentName, equipName, daysOverdue, calculatedFine, equipmentId) {
+    
+    // (1) สร้างฟังก์ชัน Callback ที่จะทำงาน "หลังจาก" จ่ายเงินสำเร็จ
+    const returnCallback = () => {
+        // (เมื่อจ่ายเงินเสร็จ ให้เปิด Popup "รับคืน" ทันที)
+        openReturnPopup(equipmentId);
+    };
+
+    // (2) เรียกฟังก์ชันชำระเงิน (ที่เพิ่งย้ายมา)
+    // (และส่งฟังก์ชัน Callback (ข้อ 1) เข้าไปด้วย)
+    openDirectPaymentPopup(
+        transactionId, 
+        studentId, 
+        studentName, 
+        equipName, 
+        daysOverdue, 
+        calculatedFine, 
+        returnCallback 
+    );
+}
+
+// =========================================
+// (จบ) ฟังก์ชันสำหรับ "ชำระค่าปรับ"
+// =========================================
+
+
 // (ฟังก์ชัน "ยืม")
 function openBorrowPopup(typeId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
-    // ◀️ (แก้ไข) เพิ่ม "ajax/" (ไม่ต้องใช้ ../) ◀️
     fetch(`ajax/get_borrow_form_data.php?type_id=${typeId}`) 
         .then(response => response.json())
         .then(data => {
@@ -77,7 +355,7 @@ function openBorrowPopup(typeId) {
             Swal.fire({
                 title: '📝 ฟอร์มยืมอุปกรณ์',
                 html: `
-                <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+                <div class="swal-info-box">
                     <p style="margin: 0;"><strong>ประเภทอุปกรณ์:</strong> ${data.equipment_type.name}</p>
                 </div>
                 <form id="swalBorrowForm" style="text-align: left; margin-top: 20px;">
@@ -107,7 +385,6 @@ function openBorrowPopup(typeId) {
                          Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                          return false;
                     }
-                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
                     return fetch('process/borrow_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
@@ -127,11 +404,11 @@ function openBorrowPopup(typeId) {
         });
 }
 
-function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์ชัน)
+function openAddEquipmentTypePopup() { 
     Swal.fire({
         title: '➕ เพิ่มประเภทอุปกรณ์ใหม่',
         html: `
-            <form id="swalAddForm" style="text-align: left; margin-top: 20px;">
+            <form id="swalAddForm" style="text-align: left; margin-top: 20px;" enctype="multipart/form-data">
                 <div style="margin-bottom: 15px;">
                     <label for="swal_eq_name" style="font-weight: bold; display: block; margin-bottom: 5px;">ชื่อประเภทอุปกรณ์:</label>
                     <input type="text" name="name" id="swal_eq_name" required style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
@@ -140,7 +417,11 @@ function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์�
                     <label for="swal_eq_desc" style="font-weight: bold; display: block; margin-bottom: 5px;">รายละเอียด:</label>
                     <textarea name="description" id="swal_eq_desc" rows="3" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;"></textarea>
                 </div>
-                </form>`,
+                <div style="margin-bottom: 15px;">
+                    <label for="swal_type_image_file" style="font-weight: bold; display: block; margin-bottom: 5px;">แนบรูปภาพ (ถ้ามี):</label>
+                    <input type="file" name="image_file" id="swal_type_image_file" accept="image/*" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                </div>
+            </form>`,
         width: '600px',
         showCancelButton: true,
         confirmButtonText: 'บันทึก',
@@ -154,8 +435,7 @@ function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์�
                 Swal.showValidationMessage('กรุณากรอกชื่อประเภทอุปกรณ์');
                 return false;
             }
-            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
-            return fetch('process/add_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (แก้ URL)
+            return fetch('process/add_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) 
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -170,23 +450,20 @@ function openAddEquipmentTypePopup() { // (แก้ชื่อฟังก์�
     });
 }
 // 2. ฟังก์ชัน "แก้ไข" (อัปเดตสำหรับ File Upload)
-function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่อและ parameter)
+function openEditEquipmentTypePopup(typeId) { 
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
-    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
-    fetch(`ajax/get_equipment_type_data.php?id=${typeId}`) // (เปลี่ยน URL)
+    fetch(`ajax/get_equipment_type_data.php?id=${typeId}`) 
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
             const type = data.equipment_type;
             
-            // (สร้าง HTML สำหรับรูปตัวอย่าง)
             let imagePreviewHtml = `
                 <div class="equipment-card-image-placeholder" style="width: 100%; height: 150px; font-size: 3rem; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; color: #ccc; border-radius: 6px;">
                     <i class="fas fa-camera"></i>
                 </div>`;
             if (type.image_url) {
-                // ◀️ (แก้ไข) Path รูปภาพถูกต้องแล้ว (เพราะ <base href> และ DB Path ถูกแก้แล้ว) ◀️
                 imagePreviewHtml = `
                     <img src="${type.image_url}?t=${new Date().getTime()}" 
                          alt="รูปตัวอย่าง" 
@@ -198,7 +475,7 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
             Swal.fire({
                 title: '🔧 แก้ไขประเภทอุปกรณ์',
                 html: `
-                <form id="swalEditForm" style="text-align: left; margin-top: 20px;">
+                <form id="swalEditForm" style="text-align: left; margin-top: 20px;" enctype="multipart/form-data">
                     
                     ${imagePreviewHtml} <input type="hidden" name="type_id" value="${type.id}">
                     
@@ -220,10 +497,9 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
                 width: '600px',
                 showCancelButton: true,
                 confirmButtonText: 'บันทึกการเปลี่ยนแปลง',
-                showDenyButton: true, // (เพิ่ม) แสดงปุ่มลบ
-                denyButtonText: `<i class="fas fa-trash"></i> ลบอุปกรณ์นี้`,
+                showDenyButton: true, 
+                denyButtonText: `<i class="fas fa-trash"></i> ลบประเภทนี้`,
                 denyButtonColor: 'var(--color-danger)',
-                denyButtonAriaLabel: 'Delete this equipment',
 
                 cancelButtonText: 'ยกเลิก',
                 confirmButtonColor: 'var(--color-primary, #0B6623)',
@@ -235,8 +511,7 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
                         Swal.showValidationMessage('กรุณากรอกชื่อประเภทอุปกรณ์');
                         return false;
                     }
-                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
-                    return fetch('process/edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) // (เปลี่ยน URL)
+                    return fetch('process/edit_equipment_type_process.php', { method: 'POST', body: new FormData(form) }) 
                         .then(response => response.json())
                         .then(data => {
                             if (data.status !== 'success') throw new Error(data.message);
@@ -248,11 +523,9 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
                 if (result.isConfirmed) {
                     Swal.fire('บันทึกสำเร็จ!', 'แก้ไขข้อมูลประเภทอุปกรณ์เรียบร้อย', 'success').then(() => location.reload());
                 }
-            });
-
-            // (เพิ่ม) Logic สำหรับปุ่ม "ลบ"
-            document.querySelector('.swal2-deny').addEventListener('click', function(e) {
-                confirmDeleteEquipmentType(e, typeId); // (เปลี่ยนฟังก์ชัน)
+                if (result.isDenied) {
+                    confirmDeleteType(typeId, type.name); 
+                }
             });
         })
         .catch(error => {
@@ -260,11 +533,46 @@ function openEditEquipmentTypePopup(typeId) { // (เปลี่ยนชื่
         });
 }
 
+// (ฟังก์ชันลบประเภท)
+function confirmDeleteType(typeId, typeName) {
+    Swal.fire({
+        title: "คุณแน่ใจหรือไม่?",
+        text: `คุณกำลังจะลบประเภท "${typeName}" (จะลบได้ต่อเมื่อไม่มีอุปกรณ์รายชิ้นในประเภทนี้)`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "ใช่, ลบเลย",
+        cancelButtonText: "ยกเลิก"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('id', typeId);
+
+            fetch('process/delete_equipment_type_process.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire('ลบสำเร็จ!', data.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('เกิดข้อผิดพลาด AJAX', error.message, 'error');
+            });
+        }
+    });
+}
+
+
 // 3. ฟังก์ชัน "รับคืน"
 function openReturnPopup(equipmentId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูลการยืม...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
-    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
     fetch(`ajax/get_return_form_data.php?id=${equipmentId}`)
         .then(response => response.json())
         .then(data => {
@@ -279,7 +587,7 @@ function openReturnPopup(equipmentId) {
             Swal.fire({
                 title: '📦 ยืนยันการรับคืน?',
                 html: `
-                <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+                <div class="swal-info-box">
                     <p style="margin: 0;"><strong>อุปกรณ์:</strong> ${trans.equipment_name} (${trans.equipment_serial || 'N/A'})</p>
                     <p style="margin: 5px 0 0 0;"><strong>ผู้ยืม:</strong> ${trans.borrower_name} (${trans.borrower_contact || 'N/A'})</p>
                     <p style="margin: 5px 0 0 0;"><strong>วันที่ยืม:</strong> ${formatDate(trans.borrow_date)}</p>
@@ -299,7 +607,6 @@ function openReturnPopup(equipmentId) {
                 cancelButtonColor: '#d33',
                 preConfirm: () => {
                     const form = document.getElementById('swalReturnForm');
-                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
                     return fetch('process/return_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
@@ -336,7 +643,6 @@ function openApprovePopup(transactionId) {
             const formData = new FormData();
             formData.append('transaction_id', transactionId);
 
-            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
             fetch('process/approve_request_process.php', {
                 method: 'POST',
                 body: formData
@@ -373,7 +679,6 @@ function openRejectPopup(transactionId) {
             const formData = new FormData();
             formData.append('transaction_id', transactionId);
 
-            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
             fetch('process/reject_request_process.php', {
                 method: 'POST',
                 body: formData
@@ -415,11 +720,19 @@ if (hamburgerBtn && sidebar) {
         }
     });
 }
+
 try {
+    // (1. สคริปต์ "อ่านธีม" - ทำงานทันทีที่โหลด)
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+    }
+
+    // (2. สคริปต์ "สลับธีม" - รอการคลิก)
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', function() {
-            // (ตรวจสอบจาก body class ที่ script ใน header อาจจะใส่ไว้)
             if (document.body.classList.contains('dark-mode')) {
                 // --- (จากมืด -> ไปสว่าง) ---
                 document.documentElement.classList.remove('dark-mode');
@@ -434,8 +747,10 @@ try {
         });
     }
 } catch (e) {
-    console.error('Theme toggle button error:', e);
+    console.error('Theme toggle script error:', e);
 }
+
+
 function showReasonPopup(reason) {
     Swal.fire({
         title: 'เหตุผลการยืม',
@@ -445,13 +760,12 @@ function showReasonPopup(reason) {
         confirmButtonColor: 'var(--color-primary, #0B6623)',
     });
 }
-// (วางต่อจากโค้ด Theme Toggle)
+
 
 // =========================================
 // (ใหม่) Logic สำหรับปุ่ม Collapse (ซ่อน/แสดง)
 // =========================================
 document.addEventListener('DOMContentLoaded', function() {
-    // เลือก .header-row ทั้งหมดที่มี data-target
     const toggles = document.querySelectorAll('.header-row[data-target]');
 
     toggles.forEach(toggle => {
@@ -461,16 +775,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (content) {
             toggle.addEventListener('click', function(e) {
-                // (ป้องกันการคลิกที่ปุ่มย่อยๆ ภายใน header)
                 if (e.target.closest('button, a')) {
-                    // ถ้าคลิกที่ปุ่ม "เพิ่ม" หรือ "ลูกศร" (ปุ่มจริงๆ)
-                    // ให้เช็คว่าเป็นปุ่มลูกศรหรือไม่
                     if (!e.target.closest('.collapse-toggle-btn')) {
-                        return; // ถ้าไม่ใช่ปุ่มลูกศร (เช่น ปุ่ม "เพิ่ม") ให้หยุด ไม่ต้องซ่อน/แสดง
+                        return; 
                     }
                 }
                 
-                // สลับคลาส 'collapsed'
                 content.classList.toggle('collapsed');
                 if (toggleBtn) {
                     toggleBtn.classList.toggle('collapsed');
@@ -479,34 +789,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+// (AJAX สำหรับ Log Pagination)
 document.addEventListener('DOMContentLoaded', function() {
     
-    // (ใช้ Event Delegation ดักจับการคลิกที่ body)
     document.body.addEventListener('click', function(event) {
         
-        // (1) ค้นหาว่าสิ่งที่คลิก (หรือแม่ของมัน) คือลิงก์ Pagination ในส่วนของ Log หรือไม่
         const paginationLink = event.target.closest('#admin-log-content .pagination-container a');
 
-        // (2) ถ้าใช่ลิงก์ pagination และลิงก์นั้น "ไม่" disabled
         if (paginationLink && !paginationLink.classList.contains('disabled')) {
             
-            // (3) ป้องกันไม่ให้หน้าเว็บรีเฟรช (นี่คือหัวใจของ AJAX)
             event.preventDefault(); 
             
-            // ◀️ (แก้ไข) Path นี้ถูกต้องแล้วเพราะ <base href> ◀️
             const url = new URL(paginationLink.href); 
             
-            // (4) เพิ่ม parameter 'ajax=1' เพื่อบอก PHP ว่าเราต้องการแค่ตาราง
             url.searchParams.set('ajax', '1'); 
             
-            // (5) หา Wrapper ที่จะเอาเนื้อหาไปใส่
             const contentWrapper = document.getElementById('admin-log-content');
-            if (!contentWrapper) return; // (ถ้าหาไม่เจอ ก็ไม่ต้องทำอะไร)
+            if (!contentWrapper) return; 
 
-            // (6) (เสริม) ทำให้ตารางจางลงเล็กน้อย เพื่อบอกว่ากำลังโหลด
             contentWrapper.style.opacity = '0.5';
 
-            // (7) ยิง Request ไปดึงข้อมูลหน้าใหม่
             fetch(url.href)
                 .then(response => {
                     if (!response.ok) {
@@ -515,13 +817,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     return response.text();
                 })
                 .then(html => {
-                    // (8) เมื่อได้ HTML ใหม่ (เฉพาะตาราง+ปุ่ม) ให้ยัดลงไปแทนที่ของเดิม
                     contentWrapper.innerHTML = html;
-                    contentWrapper.style.opacity = '1'; // (ทำให้กลับมาเข้ม)
+                    contentWrapper.style.opacity = '1'; 
                 })
                 .catch(error => {
                     console.error('Failed to load page content:', error);
-                    contentWrapper.style.opacity = '1'; // (คืนค่าถ้าพลาด)
+                    contentWrapper.style.opacity = '1'; 
                     alert('เกิดข้อผิดพลาดในการโหลดหน้า');
                 });
         }
@@ -543,9 +844,8 @@ function confirmDeleteItem(itemId, typeId) {
             
             const formData = new FormData();
             formData.append('item_id', itemId);
-            formData.append('type_id', typeId); // (ส่ง type_id ไปด้วย)
+            formData.append('type_id', typeId); 
 
-            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
             fetch('process/delete_item_process.php', {
                 method: 'POST',
                 body: formData
@@ -569,21 +869,17 @@ function confirmDeleteItem(itemId, typeId) {
 function openEditItemPopup(itemId) {
     Swal.fire({ title: 'กำลังโหลดข้อมูล...', didOpen: () => { Swal.showLoading(); } });
     
-    // 1. ดึงข้อมูลเดิม
-    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
     fetch(`ajax/get_item_data.php?id=${itemId}`)
         .then(response => response.json())
         .then(data => {
             if (data.status !== 'success') throw new Error(data.message);
             const item = data.item;
 
-            // 2. สร้างตัวเลือกสถานะ
             const statusOptions = `
                 <option value="available" ${item.status === 'available' ? 'selected' : ''}>ว่าง (Available)</option>
                 <option value="maintenance" ${item.status === 'maintenance' ? 'selected' : ''}>ซ่อมบำรุง (Maintenance)</option>
             `;
 
-            // 3. แสดง Popup
             Swal.fire({
                 title: '🔧 แก้ไขอุปกรณ์รายชิ้น (ID: ' + item.id + ')',
                 html: `
@@ -617,7 +913,6 @@ function openEditItemPopup(itemId) {
                         Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                         return false;
                     }
-                    // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
                     return fetch('process/edit_item_process.php', { method: 'POST', body: new FormData(form) })
                         .then(response => response.json())
                         .then(data => {
@@ -666,7 +961,6 @@ function openAddItemPopup(typeId, typeName) {
                 Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
                 return false;
             }
-            // ◀️ (แก้ไข) เพิ่ม "process/" ◀️
             return fetch('process/add_item_process.php', { method: 'POST', body: new FormData(form) })
                 .then(response => response.json())
                 .then(data => {
@@ -678,7 +972,6 @@ function openAddItemPopup(typeId, typeName) {
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire('เพิ่มสำเร็จ!', 'เพิ่มอุปกรณ์ชิ้นใหม่เรียบร้อย', 'success').then(() => {
-                // (สำคัญ) ปิด Popup ปัจจุบันก่อน แล้วค่อยเปิด Popup รายการใหม่
                 Swal.close();
                 openManageItemsPopup(typeId); 
             });
@@ -692,7 +985,6 @@ function openManageItemsPopup(typeId) {
         didOpen: () => { Swal.showLoading(); }
     });
 
-    // ◀️ (แก้ไข) เพิ่ม "ajax/" ◀️
     fetch(`ajax/get_items_for_type.php?type_id=${typeId}`)
         .then(response => response.json())
         .then(data => {

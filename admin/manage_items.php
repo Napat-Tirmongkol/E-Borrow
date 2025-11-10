@@ -1,11 +1,12 @@
 <?php
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 // ◀️ (แก้ไข) เพิ่ม ../ ◀️
-include('../includes/check_session.php');
+include('../includes/check_session.php'); 
 require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
     header("Location: index.php");
     exit;
 }

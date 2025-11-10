@@ -12,6 +12,6 @@ session_unset();
 session_destroy();
 
 // 4. ส่งผู้ใช้กลับไปหน้า Log in ของพนักงาน (หน้ากรอกรหัสผ่าน)
-header("Location: admin/login.php");
+header("Location: login.php");
 exit;
 ?>

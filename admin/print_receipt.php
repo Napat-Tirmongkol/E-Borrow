@@ -1,12 +1,9 @@
 <?php
-// print_receipt.php
-// (เวอร์ชันอัปเกรด 2.0 - แสดงวิธีชำระเงินและสลิป)
+include('../includes/check_session.php'); 
+require_once('../includes/db_connect.php');
 
-include('includes/check_session.php');
-require_once('db_connect.php');
-
-// 1. ตรวจสอบสิทธิ์ Admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
 }
 
@@ -50,8 +47,13 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/e_Borrow_test/">
+    
     <title>ใบเสร็จรับเงินค่าปรับ (Payment ID: <?php echo $data['payment_id']; ?>)</title>
-    <link rel="stylesheet" href="CSS/style.css">
+    
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
     <style>
         body {
             background-color: #f4f4f4;
@@ -160,7 +162,7 @@ try {
 
     <div class="receipt-container" id="receiptContent">
         <div class="receipt-header">
-            <img src="images/logo.png" alt="Logo">
+            <img src="assets/img/logo.png" alt="Logo">
             <h1>ใบเสร็จรับเงิน (ค่าปรับ)</h1>
             <p>ระบบยืมคืนอุปกรณ์ มหาวิทยาลัยรังสิต</p>
         </div>
@@ -215,6 +217,7 @@ try {
         <?php if ($data['payment_method'] == 'bank_transfer' && !empty($data['payment_slip_url'])): ?>
             <div class="payment-slip">
                 <strong>หลักฐานการชำระเงิน (สลิป):</strong><br>
+                
                 <a href="<?php echo htmlspecialchars($data['payment_slip_url']); ?>" target="_blank">
                     <img src="<?php echo htmlspecialchars($data['payment_slip_url']); ?>" alt="Payment Slip">
                 </a>

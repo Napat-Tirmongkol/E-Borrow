@@ -1,5 +1,5 @@
 <?php
-// includes/header.php
+// includes/header.php (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
 @session_start(); 
 ?>
 <!DOCTYPE html>
@@ -17,8 +17,8 @@
             try {
                 const theme = localStorage.getItem('theme');
                 if (theme === 'dark') {
+                    // (เราจะเพิ่มคลาสให้ <html> ซึ่งปลอดภัยและทำงานได้ทันที)
                     document.documentElement.classList.add('dark-mode');
-                    // (ลบบรรทัด document.body.classList.add('dark-mode'); ออกจากตรงนี้)
                 }
             } catch (e) { 
                 console.error('Theme init error:', e); 
@@ -31,8 +31,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
-<header class="header"> 
+<body> <header class="header"> 
         <h1>MedLoan - (Admin)</h1>
         
         <div class="user-info"> 

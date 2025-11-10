@@ -2,9 +2,16 @@
 // record_payment_process.php
 // (อัปเกรด 2.0: รองรับการอัปโหลดสลิป)
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+include('..includes/check_session_ajax.php');
+require_once('..includes/db_connect.php');
+require_once('..includes/log_function.php');
+
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
+    exit;
+}
 
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
@@ -27,26 +34,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    try {
+  try {
         $pdo->beginTransaction();
 
         // 2. [เพิ่ม] ตรรกะการอัปโหลดไฟล์ (เหมือนกับไฟล์ direct_payment)
         if ($payment_method == 'bank_transfer') {
             if (isset($_FILES['payment_slip']) && $_FILES['payment_slip']['error'] == 0) {
                 
-                $upload_dir = '../uploads/slips/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0755, true);
+                // ✅ โค้ดใหม่: START
+                $upload_dir_server = '../uploads/slips/'; // Path สำหรับ Server (PHP)
+                $upload_dir_db = 'uploads/slips/';     // Path สำหรับ Database (HTML)
+                // ✅ โค้ดใหม่: END
+                
+                if (!is_dir($upload_dir_server)) {
+                    mkdir($upload_dir_server, 0755, true);
                 }
                 
                 $file_extension = pathinfo($_FILES['payment_slip']['name'], PATHINFO_EXTENSION);
                 $new_filename = 'slip-fine-' . $fine_id . '-' . uniqid() . '.' . strtolower($file_extension);
-                $target_file = $upload_dir . $new_filename;
+
+                // ✅ โค้ดใหม่: START
+                $target_file_server = $upload_dir_server . $new_filename; // (Path Server)
+                $target_file_db = $upload_dir_db . $new_filename;     // (Path DB)
+                // ✅ โค้ดใหม่: END
 
                 $check = getimagesize($_FILES['payment_slip']['tmp_name']);
                 if ($check !== false) {
-                    if (move_uploaded_file($_FILES['payment_slip']['tmp_name'], $target_file)) {
-                        $payment_slip_url = $target_file;
+                    // ✅ โค้ดใหม่: ใช้ $target_file_server
+                    if (move_uploaded_file($_FILES['payment_slip']['tmp_name'], $target_file_server)) {
+                        // ✅ โค้ดใหม่: ใช้ $target_file_db
+                        $payment_slip_url = $target_file_db;
                     } else {
                         throw new Exception("ไม่สามารถย้ายไฟล์สลิปที่อัปโหลดได้");
                     }

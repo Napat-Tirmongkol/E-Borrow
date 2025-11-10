@@ -9,8 +9,8 @@ require_once('../includes/log_function.php');
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'message' => 'Invalid request'];
 
-// 1. ตรวจสอบสิทธิ์ Admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+$allowed_roles = ['admin', 'employee', 'editor']; // (อนุญาต employee และ editor ด้วย)
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
     $response['message'] = 'Unauthorized';
     echo json_encode($response);
     exit;

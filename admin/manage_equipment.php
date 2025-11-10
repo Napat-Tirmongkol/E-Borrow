@@ -1,10 +1,14 @@
 <?php
-// 1. "จ้างยามมาเฝ้าประตู"
-// ◀️ (แก้ไข) เพิ่ม ../ เพื่อแก้ Error 500 ◀️
 include('../includes/check_session.php'); 
-// 2. เรียกใช้ไฟล์เชื่อมต่อ DB
-// ◀️ (แก้ไข) เพิ่ม ../ ◀️
-require_once('../includes/db_connect.php'); 
+require_once('../includes/db_connect.php');
+
+// ✅ โค้ดใหม่: START (เพิ่ม Guard)
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
+    header("Location: index.php"); // (ถ้าไม่ใช่ Admin หรือ Editor ให้เด้งกลับ)
+    exit;
+}
+
 
 // (โค้ดส่วนตรวจสอบ $_GET message ... ยังคงเดิม)
 $message = '';
@@ -60,19 +64,27 @@ try {
 ?>
 
 <?php if ($message): ?>
-    <div style="padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #fff; background-color: <?php echo ($message_type == 'success') ? 'var(--color-success)' : 'var(--color-danger)'; ?>;">
-        <?php echo $message; ?>
-    </div>
+    <div style="padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #fff; background-color: <?php echo ($message_type == 'success') ? 'var(--color-success)' : 'var(--color-danger)'; ?>;">
+        <?php echo $message; ?>
+    </div>
 <?php endif; ?>
+
+
+<?php if (isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'editor'])): ?>
 
 <div class="header-row">
     <h2><i class="fas fa-tools"></i> จัดการประเภทอุปกรณ์</h2>
-    <?php if (isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): ?>
-        <button class="add-btn" onclick="openAddTypePopup()">
-            <i class="fas fa-plus"></i> เพิ่มประเภทอุปกรณ์
-        </button>
-    <?php endif; ?>
+    
+    <button class="add-btn" onclick="openAddTypePopup()">
+        <i class="fas fa-plus"></i> เพิ่มประเภทอุปกรณ์
+    </button>
 </div>
+<?php else: // (สำหรับ Role อื่นที่ไม่ใช่ Admin หรือ Editor) ?>
+<div class="header-row" style="cursor: default;"> 
+    <h2><i class="fas fa-tools"></i> จัดการประเภทอุปกรณ์</h2>
+    </div>
+<?php endif; ?>
+
 
 <div class="filter-row">
     <form action="admin/manage_equipment.php" method="GET" style="display: contents;">
@@ -122,11 +134,12 @@ try {
                             <strong style="color: var(--color-success);"><?php echo $type['available_quantity']; ?></strong> / <?php echo $type['total_quantity']; ?>
                         </td>
                         <td class="action-buttons">
+                            
+                            <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow">
+                                <i class="fas fa-list-ol"></i> จัดการรายชิ้น
+                            </a>
+                            
                             <?php if ($_SESSION['role'] == 'admin'): ?>
-                                <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow">
-                                    <i class="fas fa-list-ol"></i> จัดการรายชิ้น
-                                </a>
-                                
                                 <button type="button" class="btn btn-manage" style="margin-left: 5px;" onclick="openEditTypePopup(<?php echo $type['id']; ?>)">แก้ไข</button>
 
                                 <button type="button"
@@ -171,11 +184,13 @@ try {
                     </p>
                 </div>
 
-                <div class="pending-card-actions">
+               <div class="pending-card-actions">
+
+                    <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow" style="margin-left: 0;">
+                        <i class="fas fa-list-ol"></i> จัดการ
+                    </a>
+
                     <?php if ($_SESSION['role'] == 'admin'): ?>
-                        <a href="admin/manage_items.php?type_id=<?php echo $type['id']; ?>" class="btn btn-borrow" style="margin-left: 0;">
-                            <i class="fas fa-list-ol"></i> จัดการ
-                        </a>
                         <button type="button" class="btn btn-manage" onclick="openEditTypePopup(<?php echo $type['id']; ?>)">แก้ไข</button>
                         <button type="button" class="btn btn-danger" onclick="confirmDeleteType(<?php echo $type['id']; ?>, '<?php echo htmlspecialchars(addslashes($type['name'])); ?>')">ลบ</button>
                     <?php endif; ?>

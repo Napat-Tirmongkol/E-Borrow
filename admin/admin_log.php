@@ -1,8 +1,5 @@
 <?php
-// admin_log.php (อัปเกรดสำหรับ AJAX Pagination)
-
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('../includes/check_session.php');
+include('../includes/check_session.php'); 
 require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin 

@@ -1,12 +1,11 @@
 <?php
 // includes/student_footer.php
-// ปิดแท็ก main และเพิ่ม Footer Navigation
 
-// ตรวจสอบว่ามีตัวแปร $active_page หรือไม่ ถ้าไม่มให้เป็นค่าว่าง
 $active_page = $active_page ?? ''; 
 ?>
 
-</main> <nav class="footer-nav">
+</main> 
+<nav class="footer-nav">
     <a href="index.php" class="<?php echo ($active_page == 'home') ? 'active' : ''; ?>">
         <i class="fas fa-hand-holding-medical"></i>
         ที่ยืมอยู่
@@ -24,30 +23,36 @@ $active_page = $active_page ?? '';
         ตั้งค่า
     </a>
 </nav>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    try {
-        const themeToggleBtn = document.getElementById('theme-toggle-btn');
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', function() {
-                // (ตรวจสอบจาก body class ที่ script ใน header อาจจะใส่ไว้)
-                if (document.body.classList.contains('dark-mode')) {
-                    // --- (จากมืด -> ไปสว่าง) ---
-                    document.documentElement.classList.remove('dark-mode');
-                    document.body.classList.remove('dark-mode');
-                    localStorage.setItem('theme', 'light');
-                } else {
-                    // --- (จากสว่าง -> ไปมืด) ---
-                    document.documentElement.classList.add('dark-mode');
-                    document.body.classList.add('dark-mode');
-                    localStorage.setItem('theme', 'dark');
-                }
-            });
-        }
-    } catch (e) {
-        console.error('Theme toggle button error:', e);
+try {
+    // (1. สคริปต์ "อ่านธีม" - ทำงานทันทีที่โหลด)
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
     }
-});
+
+    // (2. สคริปต์ "สลับธีม" - รอการคลิก)
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', function() {
+            if (document.body.classList.contains('dark-mode')) {
+                // --- (จากมืด -> ไปสว่าง) ---
+                document.documentElement.classList.remove('dark-mode');
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                // --- (จากสว่าง -> ไปมืด) ---
+                document.documentElement.classList.add('dark-mode');
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    }
+} catch (e) {
+    console.error('Theme toggle script error:', e);
+}
 </script>
 </body>
 </html>

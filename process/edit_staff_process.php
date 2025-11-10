@@ -61,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } 
         // (ถ้าเป็นบัญชีปกติ)
         else {
-            if ($role != 'admin' && $role != 'employee') {
+           	if (!in_array($role, ['admin', 'employee', 'editor'])) {
                 throw new Exception("สิทธิ์ (Role) ที่ส่งมาไม่ถูกต้อง");
             }
             $sql = "UPDATE med_users SET username = ?, full_name = ?, role = ?";

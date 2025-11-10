@@ -3,7 +3,7 @@
 // รับข้อมูลจากฟอร์ม "แก้ไขโปรไฟล์"
 
 session_start();
-require_once('db_connect.php'); 
+require_once('../includes/db_connect.php');
 
 // 1. "ยามเฝ้าประตู"
 if (empty($_SESSION['student_id']) || $_SERVER["REQUEST_METHOD"] != "POST") {

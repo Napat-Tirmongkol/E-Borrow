@@ -1,7 +1,5 @@
 <?php
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-// ◀️ (แก้ไข) เพิ่ม ../ ◀️
-include('../includes/check_session.php');
+include('../includes/check_session.php'); 
 require_once('../includes/db_connect.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin
@@ -11,7 +9,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 }
 
 // (ฟังก์ชันสำหรับ Export Excel)
-function exportToExcel($data, $filename = "borrow_report") {
+// ◀️ (แก้ไข) เปลี่ยน $filename เริ่มต้น ◀️
+function exportToExcel($data, $filename = "รายงานการยืมคืน") {
     header('Content-Type: application/vnd.ms-excel');
     header('Content-Disposition: attachment;filename="' . $filename . '_' . date('YmdHi') . '.xls"');
     header('Cache-Control: max-age=0');
@@ -107,7 +106,7 @@ try {
 
     // (ตรวจสอบ ถ้ามีการร้องขอ Export)
     if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-        exportToExcel($transactions, "borrow_report");
+        exportToExcel($transactions, "รายงานการยืมคืน"); // ◀️ (แก้ไข) เปลี่ยนชื่อไฟล์ตอนเรียกใช้ด้วย ◀️
     }
 
 } catch (PDOException $e) {
@@ -134,12 +133,12 @@ include('../includes/header.php');
         </a>
         <button onclick="window.print()" class="btn btn-secondary">
             <i class="fas fa-print"></i> พิมพ์รายงาน
-        </button>
+        </a>
     </div>
 </div>
 
 <div class="filter-row section-card" style="margin-bottom: 1.5rem;">
-    <form action="report_borrowed.php" method="GET" style="display: contents; gap: 1rem;">
+    <form action="admin/report_borrowed.php" method="GET" style="display: contents; gap: 1rem;">
         <label for="start_date">ตั้งแต่วันที่:</label>
         <input type="date" name="start_date" id="start_date" value="<?php echo htmlspecialchars($start_date ?? ''); ?>">
 
@@ -154,7 +153,7 @@ include('../includes/header.php');
         </select>
 
         <button type="submit" class="btn btn-return"><i class="fas fa-filter"></i> กรอง</button>
-        <a href="report_borrowed.php" class="btn btn-secondary"><i class="fas fa-times"></i> ล้างค่า</a>
+        <a href="admin/report_borrowed.php" class="btn btn-secondary"><i class="fas fa-times"></i> ล้างค่า</a>
     </form>
 </div>
 

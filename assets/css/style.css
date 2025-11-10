@@ -1522,3 +1522,66 @@ body.dark-mode .pagination-container .btn.disabled {
     cursor: not-allowed;
     opacity: 0.8; /* (ทำให้จางลงเล็กน้อย) */
 }
+
+/* ========================================= */
+/* (ใหม่) สไตล์สำหรับการพิมพ์ (Print Styles)   */
+/* ========================================= */
+@media print {
+    
+    /* 1. ซ่อนทุกส่วนที่ไม่ต้องการ */
+    .header,
+    .footer-nav,
+    .header-row,
+    .filter-row,
+    .student-card-list,
+    .desktop-only .action-buttons,
+    .collapse-toggle-btn {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* 2. จัดการหน้ากระดาษและเนื้อหาหลัก */
+    body {
+        background-color: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-family: 'RSU', Arial, sans-serif;
+        color: #000 !important;
+    }
+    
+    main.content {
+        margin: 20px !important; /* (เว้นขอบกระดาษ) */
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    /* 3. จัดการตาราง */
+    .table-container,
+    .table-container table {
+        display: block !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+    
+    /* (บังคับให้ตารางแสดงผลแบบ Desktop เสมอ) */
+    .desktop-only {
+        display: block !important;
+    }
+
+    /* (ซ่อนปุ่มในตาราง ถ้ามี) */
+    td.action-buttons {
+        display: none !important;
+    }
+
+    /* (ป้องกันตาราง/แถว ถูกตัดครึ่งหน้า) */
+    tr, td, th, thead, tbody {
+        page-break-inside: avoid !important;
+    }
+    
+    a {
+        text-decoration: none;
+        color: #000;
+    }
+}

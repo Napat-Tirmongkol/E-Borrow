@@ -1,5 +1,5 @@
 <?php
-// includes/student_header.php
+// includes/student_header.php (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
 @session_start(); 
 ?>
 <!DOCTYPE html>
@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <base href="/e_Borrow_test/">
 
     <title><?php echo isset($page_title) ? $page_title : 'ระบบยืมคืนอุปกรณ์'; ?></title>
@@ -18,16 +18,33 @@
                 const theme = localStorage.getItem('theme');
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark-mode');
-                    // (ลบบรรทัด document.body.classList.add('dark-mode'); ออกจากตรงนี้)
                 }
             } catch (e) { 
                 console.error('Theme init error:', e); 
             }
         })();
     </script>
-    
+
     <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
 </head>
 <body>
+
+    <header class="header">
+        <h1>MedLoan (สำหรับผู้ใช้งาน)</h1>
+        
+        <div class="user-info">
+            
+            <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" title="สลับโหมด">
+                <i class="fas fa-moon"></i> <i class="fas fa-sun"></i>
+            </button>
+            สวัสดี, <?php echo htmlspecialchars($_SESSION['student_full_name']); ?>
+            
+            <a href="logout.php" class="btn btn-logout">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
+            </a>
+        </div>
+    </header>
+
+    <main class="content" style="margin-left: 0; margin-top: 60px;">

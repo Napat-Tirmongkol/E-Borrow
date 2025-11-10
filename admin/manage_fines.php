@@ -1,17 +1,9 @@
 <?php
-// manage_fines.php
-// (เวอร์ชันสมบูรณ์: 2.2)
-// - คำนวณค่าปรับอัตโนมัติ
-// - ชำระเงินโดยตรง (รวมขั้นตอน)
-// - รองรับการอัปโหลดสลิป
-// - แก้ไขบั๊ก Dark Mode & NULL Student ID
+include('../includes/check_session.php'); 
+require_once('../includes/db_connect.php');
 
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('../includes/check_session.php');
-require_once('../includes/db_connect.php'); // (จะดึง FINE_RATE_PER_DAY มาด้วย)
-
-// 2. ตรวจสอบสิทธิ์ Admin 
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
     header("Location: index.php");
     exit;
 }
@@ -194,8 +186,9 @@ include('../includes/header.php');
                                     (<?php echo date('d/m/Y', strtotime($fine['created_at'])); ?>)
                                 </div>
                             </td>
-                            <td class="action-buttons">
-                                <a href="print_receipt.php?payment_id=<?php echo $fine['payment_id']; ?>" 
+                           <td class="action-buttons">
+                                
+                                <a href="admin/print_receipt.php?payment_id=<?php echo $fine['payment_id']; ?>" 
                                    target="_blank" 
                                    class="btn btn-secondary">
                                     <i class="fas fa-print"></i> พิมพ์ใบเสร็จ
@@ -215,6 +208,40 @@ include('../includes/header.php');
 
 // 1. Popup สำหรับ "ชำระเงินโดยตรง" (จากตารางที่ 1)
 function openDirectPaymentPopup(transactionId, studentId, studentName, equipName, daysOverdue, calculatedFine) {
+    
+    // ✅ (1.1) สร้างฟังก์ชัน Helper นี้ไว้ข้างนอก
+    const setupPaymentMethodToggle = () => {
+        try {
+            // ค้นหา element ภายใน Popup ที่กำลังเปิดอยู่
+            const cashRadio = Swal.getPopup().querySelector('#swal_pm_cash_1');
+            const bankRadio = Swal.getPopup().querySelector('#swal_pm_bank_1');
+            const slipGroup = Swal.getPopup().querySelector('#slipUploadGroup');
+            const slipInput = Swal.getPopup().querySelector('#swal_payment_slip');
+            const slipRequired = Swal.getPopup().querySelector('#slipRequired');
+
+            const toggleLogic = (method) => {
+                if (method === 'bank_transfer') {
+                    slipGroup.style.display = 'block';
+                    slipInput.required = true;
+                    slipRequired.style.display = 'inline';
+                } else {
+                    slipGroup.style.display = 'none';
+                    slipInput.required = false;
+                    slipRequired.style.display = 'none';
+                }
+            };
+
+            // แนบ Listener
+            cashRadio.addEventListener('change', () => toggleLogic('cash'));
+            bankRadio.addEventListener('change', () => toggleLogic('bank_transfer'));
+            
+            // เรียกใช้ครั้งแรก
+            toggleLogic('cash');
+        } catch (e) {
+            console.error('Swal Toggle Error:', e);
+        }
+    };
+
     Swal.fire({
         title: '💵 บันทึกการชำระเงิน (เกินกำหนด)',
         html: `
@@ -241,11 +268,12 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: bold; display: block; margin-bottom: 5px;">วิธีการชำระเงิน: <span style="color:red;">*</span></label>
                 <div style="display: flex; gap: 1rem;">
+                    
                     <label style="font-weight: normal;">
-                        <input type="radio" name="payment_method" value="cash" checked onchange="toggleSlipUpload(this.value)"> เงินสด
+                        <input type="radio" name="payment_method" id="swal_pm_cash_1" value="cash" checked> เงินสด
                     </label>
                     <label style="font-weight: normal;">
-                        <input type="radio" name="payment_method" value="bank_transfer" onchange="toggleSlipUpload(this.value)"> บัญชีธนาคาร
+                        <input type="radio" name="payment_method" id="swal_pm_bank_1" value="bank_transfer"> บัญชีธนาคาร
                     </label>
                 </div>
             </div>
@@ -257,28 +285,13 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
             </div>
             
         </form>
-        
-        <script>
-            // (JS Helper นี้ต้องอยู่ใน HTML ของ Swal)
-            function toggleSlipUpload(method) {
-                const slipGroup = document.getElementById('slipUploadGroup');
-                const slipInput = document.getElementById('swal_payment_slip');
-                const slipRequired = document.getElementById('slipRequired');
-                
-                if (method === 'bank_transfer') {
-                    slipGroup.style.display = 'block';
-                    slipInput.required = true;
-                    slipRequired.style.display = 'inline';
-                } else {
-                    slipGroup.style.display = 'none';
-                    slipInput.required = false;
-                    slipRequired.style.display = 'none';
-                }
-            }
-            // (ต้องเรียกฟังก์ชันนี้ทันทีที่ HTML ถูกสร้าง)
-            setTimeout(() => toggleSlipUpload('cash'), 0);
         `,
-        didOpen: () => { toggleSlipUpload('cash'); },
+        
+        // ✅ (1.4) เพิ่ม didOpen กลับมา
+        didOpen: () => {
+            setupPaymentMethodToggle();
+        },
+
         showCancelButton: true,
         confirmButtonText: 'ยืนยันการชำระเงิน',
         cancelButtonText: 'ยกเลิก',
@@ -301,7 +314,7 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
                 return false;
             }
             
-            return fetch('../process/direct_payment_process.php', { method: 'POST', body: formData }) 
+            return fetch('process/direct_payment_process.php', { method: 'POST', body: formData }) 
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -321,8 +334,9 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
             }).then((finalResult) => {
                 if (finalResult.isConfirmed) {
                     const newPaymentId = result.value.new_payment_id;
-                    window.open(`print_receipt.php?payment_id=${newPaymentId}`, '_blank');
-                    location.reload(); 
+                    window.open(`admin/print_receipt.php?payment_id=${newPaymentId}`, '_blank');
+                    
+                    location.reload();
                 } else {
                     location.reload(); 
                 }
@@ -334,6 +348,40 @@ function openDirectPaymentPopup(transactionId, studentId, studentName, equipName
 
 // 2. Popup สำหรับ "รับชำระเงิน" (จากตารางที่ 2 - สำหรับข้อมูลเก่า)
 function openRecordPaymentPopup(fineId, studentName, amountDue) {
+    
+    // ✅ (2.1) สร้างฟังก์ชัน Helper นี้ไว้ข้างนอก
+    const setupPaymentMethodToggle = () => {
+        try {
+            // ค้นหา element ภายใน Popup ที่กำลังเปิดอยู่
+            const cashRadio = Swal.getPopup().querySelector('#swal_pm_cash_2');
+            const bankRadio = Swal.getPopup().querySelector('#swal_pm_bank_2');
+            const slipGroup = Swal.getPopup().querySelector('#slipUploadGroup');
+            const slipInput = Swal.getPopup().querySelector('#swal_payment_slip');
+            const slipRequired = Swal.getPopup().querySelector('#slipRequired');
+
+            const toggleLogic = (method) => {
+                if (method === 'bank_transfer') {
+                    slipGroup.style.display = 'block';
+                    slipInput.required = true;
+                    slipRequired.style.display = 'inline';
+                } else {
+                    slipGroup.style.display = 'none';
+                    slipInput.required = false;
+                    slipRequired.style.display = 'none';
+                }
+            };
+
+            // แนบ Listener
+            cashRadio.addEventListener('change', () => toggleLogic('cash'));
+            bankRadio.addEventListener('change', () => toggleLogic('bank_transfer'));
+            
+            // เรียกใช้ครั้งแรก
+            toggleLogic('cash');
+        } catch (e) {
+            console.error('Swal Toggle Error:', e);
+        }
+    };
+
     Swal.fire({
         title: '💵 บันทึกการชำระเงิน',
         html: `
@@ -353,11 +401,12 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: bold; display: block; margin-bottom: 5px;">วิธีการชำระเงิน: <span style="color:red;">*</span></label>
                 <div style="display: flex; gap: 1rem;">
+                    
                     <label style="font-weight: normal;">
-                        <input type="radio" name="payment_method" value="cash" checked onchange="toggleSlipUpload(this.value)"> เงินสด
+                        <input type="radio" name="payment_method" id="swal_pm_cash_2" value="cash" checked> เงินสด
                     </label>
                     <label style="font-weight: normal;">
-                        <input type="radio" name="payment_method" value="bank_transfer" onchange="toggleSlipUpload(this.value)"> บัญชีธนาคาร
+                        <input type="radio" name="payment_method" id="swal_pm_bank_2" value="bank_transfer"> บัญชีธนาคาร
                     </label>
                 </div>
             </div>
@@ -368,25 +417,13 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
                        style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
             </div>
         </form>
-        <script>
-            function toggleSlipUpload(method) {
-                const slipGroup = document.getElementById('slipUploadGroup');
-                const slipInput = document.getElementById('swal_payment_slip');
-                const slipRequired = document.getElementById('slipRequired');
-                
-                if (method === 'bank_transfer') {
-                    slipGroup.style.display = 'block';
-                    slipInput.required = true;
-                    slipRequired.style.display = 'inline';
-                } else {
-                    slipGroup.style.display = 'none';
-                    slipInput.required = false;
-                    slipRequired.style.display = 'none';
-                }
-            }
-            setTimeout(() => toggleSlipUpload('cash'), 0);
         `,
-        didOpen: () => { toggleSlipUpload('cash'); },
+        
+        // ✅ (2.4) เพิ่ม didOpen กลับมา
+        didOpen: () => {
+            setupPaymentMethodToggle();
+        },
+
         showCancelButton: true,
         confirmButtonText: 'ยืนยันการชำระเงิน',
         cancelButtonText: 'ยกเลิก',
@@ -408,7 +445,7 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
                 Swal.showValidationMessage('กรุณากรอกจำนวนเงิน');
                 return false;
             }
-            return fetch('../process/record_payment_process.php', { method: 'POST', body: formData })
+           return fetch('process/record_payment_process.php', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status !== 'success') throw new Error(data.message);
@@ -428,8 +465,9 @@ function openRecordPaymentPopup(fineId, studentName, amountDue) {
             }).then((finalResult) => {
                 if (finalResult.isConfirmed) {
                     const newPaymentId = result.value.new_payment_id;
-                    window.open(`print_receipt.php?payment_id=${newPaymentId}`, '_blank');
-                    location.reload(); 
+                    window.open(`admin/print_receipt.php?payment_id=${newPaymentId}`, '_blank');
+                    
+                    location.reload();
                 } else {
                     location.reload(); 
                 }

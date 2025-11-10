@@ -2,8 +2,8 @@
 // live_search_equipment.php
 // ◀️ (แก้ไข) API นี้จะค้นหาจาก "Types" ที่ว่าง
 
-include('includes/check_student_session.php'); 
-require_once('db_connect.php'); 
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
 
 header('Content-Type: application/json');
 

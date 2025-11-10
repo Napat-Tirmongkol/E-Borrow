@@ -2,9 +2,16 @@
 // create_fine_process.php
 // (ไฟล์ใหม่) บันทึกการ "สร้าง" ค่าปรับ
 
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+include('..includes/check_session_ajax.php');
+require_once('..includes/db_connect.php');
+require_once('..includes/log_function.php');
+
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
+    exit;
+}
 
 header('Content-Type: application/json');
 $response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];

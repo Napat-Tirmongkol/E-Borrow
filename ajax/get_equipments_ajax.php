@@ -2,8 +2,8 @@
 // get_equipments_ajax.php
 // (ไฟล์ใหม่) Endpoint สำหรับดึงข้อมูลอุปกรณ์ด้วย AJAX
 
-header('Content-Type: application/json');
-require_once('db_connect.php');
+include('../includes/check_session_ajax.php');
+require_once('../includes/db_connect.php');
 
 $response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาด', 'data' => []];
 

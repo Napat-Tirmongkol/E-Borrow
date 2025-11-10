@@ -37,6 +37,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo json_encode($response);
         exit;
     }
+	if (!in_array($role, ['admin', 'employee', 'editor'])) {
+        $response['message'] = 'สิทธิ์ (Role) ไม่ถูกต้อง';
 
     // 6. ดำเนินการ INSERT
     try {

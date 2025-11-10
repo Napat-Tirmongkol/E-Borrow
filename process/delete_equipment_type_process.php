@@ -9,7 +9,8 @@ require_once('../includes/db_connect.php');
 require_once('../includes/log_function.php');
 
 // 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+$allowed_roles = ['admin', 'editor'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowed_roles)) {
     header('Content-Type: application/json');
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
     exit;

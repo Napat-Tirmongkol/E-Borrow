@@ -1,10 +1,7 @@
 <?php
-// 1. "จ้างยามมาเฝ้าประตู"
 include('../includes/check_session.php');
-// 2. เรียกใช้ไฟล์เชื่อมต่อ DB
 require_once('../includes/db_connect.php');
 
-// 3. ดึงข้อมูล KPI (กล่องสรุป)
 try {
     $stmt_borrowed = $pdo->query("SELECT COUNT(*) FROM med_equipment_items WHERE status = 'borrowed'");
     $count_borrowed = $stmt_borrowed->fetchColumn();
@@ -22,7 +19,7 @@ try {
 // 4. ดึงข้อมูล "รายการรออนุมัติ" (Pending Requests) 
 $pending_requests = [];
 try {
-    $sql_pending = "SELECT 
+   $sql_pending = "SELECT 
                         t.id as transaction_id,
                         t.borrow_date, 
                         t.due_date,
@@ -31,12 +28,11 @@ try {
                         s.full_name as student_name,
                         u.full_name as staff_name
                     FROM med_transactions t
-                    -- ◀️ (แก้ไข) เปลี่ยน t.equipment_type_id เป็น t.type_id
                     JOIN med_equipment_types et ON t.type_id = et.id 
                     LEFT JOIN med_students s ON t.borrower_student_id = s.id
                     LEFT JOIN med_users u ON t.lending_staff_id = u.id
                     WHERE t.approval_status = 'pending'
-                    ORDER BY t.borrow_date ASC"; 
+                    ORDER BY t.borrow_date ASC";
     
     $stmt_pending = $pdo->prepare($sql_pending);
     $stmt_pending->execute();
@@ -50,18 +46,23 @@ try {
 $overdue_items = [];
 try {
     $sql_overdue = "SELECT 
-                        t.due_date,
-                        t.equipment_id,
-                        ei.name as equipment_name,
+                        t.id as transaction_id, 
+                        t.equipment_id, 
+                        t.due_date, 
+                        t.fine_status,
+                        ei.name as equipment_name, 
+                        s.id as student_id, 
                         s.full_name as student_name,
-                        s.phone_number
+                        s.phone_number,
+                        DATEDIFF(CURDATE(), t.due_date) AS days_overdue
                     FROM med_transactions t
                     JOIN med_equipment_items ei ON t.equipment_id = ei.id
                     LEFT JOIN med_students s ON t.borrower_student_id = s.id
                     WHERE t.status = 'borrowed' 
                       AND t.approval_status IN ('approved', 'staff_added') 
                       AND t.due_date < CURDATE()
-                    ORDER BY t.due_date ASC"; 
+                      AND t.fine_status = 'none' -- (ยังคงเงื่อนไขนี้ไว้)
+                    ORDER BY t.due_date ASC";
     $stmt_overdue = $pdo->prepare($sql_overdue);
     $stmt_overdue->execute();
     $overdue_items = $stmt_overdue->fetchAll(PDO::FETCH_ASSOC);
@@ -190,6 +191,14 @@ include('../includes/header.php');
                     </div>
                 <?php else: ?>
                     <?php foreach ($overdue_items as $item): ?>
+                        
+                        <?php
+                            // (ตรรกะสำหรับคำนวณค่าปรับ)
+                            $days_overdue = (int)$item['days_overdue'];
+                            if ($days_overdue < 0) $days_overdue = 0;
+                            $calculated_fine = $days_overdue * FINE_RATE_PER_DAY;
+                        ?>
+
                         <div class="history-card">
                             
                             <div class="history-card-icon">
@@ -209,17 +218,24 @@ include('../includes/header.php');
                                     เลยกำหนด: <?php echo date('d/m/Y', strtotime($item['due_date'])); ?>
                                 </p>
                             </div>
-                            
-                            <div class="pending-card-actions">
-                                <button type="button" 
-                                        class="btn btn-return" 
-                                        onclick="openReturnPopup(<?php echo $item['equipment_id']; ?>)">
-                                    <i class="fas fa-undo-alt"></i> รับคืน
+                        <div class="pending-card-actions">
+                                
+                                <button type="button" class="btn btn-danger" 
+                                        onclick="openFineAndReturnPopup(
+                                            <?php echo $item['transaction_id']; ?>,
+                                            <?php echo $item['student_id'] ?? 0; ?>,
+                                            '<?php echo htmlspecialchars(addslashes($item['student_name'] ?? '[N/A]')); ?>',
+                                            '<?php echo htmlspecialchars(addslashes($item['equipment_name'])); ?>',
+                                            <?php echo $days_overdue; ?>,
+                                            <?php echo $calculated_fine; ?>,
+                                            <?php echo $item['equipment_id']; ?> 
+                                        )">
+                                    <i class="fas fa-dollar-sign"></i> ชำระ/รับคืน
                                 </button>
+
                             </div>
 
-                        </div>
-                    <?php endforeach; ?>
+                        </div> <?php endforeach; ?>
                 <?php endif; ?>
             
             </div>
