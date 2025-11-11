@@ -1,11 +1,8 @@
 <?php
-// process/request_borrow_process.php
-// (ไฟล์ใหม่) รับคำขอยืมจากนักศึกษา
+// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/process/request_borrow_process.php]
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-// (ใช้ "ยาม" ตัวใหม่ที่เราเพิ่งสร้าง)
 require_once('../includes/check_student_session_ajax.php'); 
-
 require_once('../includes/db_connect.php');
 require_once('../includes/log_function.php');
 
@@ -16,7 +13,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // 2. รับข้อมูลจากฟอร์ม
     $type_id = isset($_POST['type_id']) ? (int)$_POST['type_id'] : 0;
-    $student_id = $_SESSION['student_id']; // (ดึงจาก Session)
+    $student_id = $_SESSION['student_id']; 
     $reason = isset($_POST['reason_for_borrowing']) ? trim($_POST['reason_for_borrowing']) : '';
     $staff_id = isset($_POST['lending_staff_id']) ? (int)$_POST['lending_staff_id'] : 0;
     $due_date = isset($_POST['due_date']) ? $_POST['due_date'] : null;
@@ -26,6 +23,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo json_encode($response);
         exit;
     }
+
+    // ✅ (3) เพิ่ม: ส่วนจัดการไฟล์อัปโหลด
+    $attachment_url_to_db = null;
+    try {
+        if (isset($_FILES['attachment_file']) && $_FILES['attachment_file']['error'] == 0) {
+            
+            $upload_dir_server = '../uploads/attachments/'; // Path สำหรับ Server (PHP)
+            $upload_dir_db = 'uploads/attachments/';     // Path สำหรับ Database (HTML)
+            
+            if (!is_dir($upload_dir_server)) {
+                mkdir($upload_dir_server, 0755, true);
+            }
+            
+            // (ป้องกันชื่อไฟล์ภาษาไทย หรืออักขระแปลกๆ)
+            $original_filename = basename($_FILES['attachment_file']['name']);
+            $safe_filename = preg_replace('/[^A-Za-z0-9\._-]/', '', str_replace(' ', '_', $original_filename));
+            $new_filename = 'req-' . uniqid() . '-' . $safe_filename;
+
+            $target_file_server = $upload_dir_server . $new_filename;
+            $target_file_db = $upload_dir_db . $new_filename;
+
+            if (move_uploaded_file($_FILES['attachment_file']['tmp_name'], $target_file_server)) {
+                $attachment_url_to_db = $target_file_db;
+            } else {
+                throw new Exception("ไม่สามารถย้ายไฟล์ที่อัปโหลดได้");
+            }
+        }
+    } catch (Exception $e) {
+        // (ถ้าอัปโหลดไฟล์ล้มเหลว ก็ไม่เป็นไร ให้ดำเนินการต่อโดยไม่มีไฟล์)
+        error_log("File upload failed: " . $e->getMessage());
+    }
+    // ✅ (จบส่วนจัดการไฟล์)
+
 
     // 3. เริ่ม Transaction
     try {
@@ -53,17 +83,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // 3.4 "สร้าง" คำขอยืม (transaction)
-        // (เราต้องใส่ทั้ง type_id, item_id และ equipment_id (ซึ่งก็คือ item_id) ตาม Schema)
+        // ✅ (4) แก้ไข SQL INSERT (ใช้คอลัมน์ใหม่ `attachment_url` ที่เราเพิ่มไปแล้ว)
         $sql_trans = "INSERT INTO med_transactions 
-                        (type_id, item_id, equipment_id, borrower_student_id, reason_for_borrowing, lending_staff_id, due_date, 
+                        (type_id, item_id, equipment_id, borrower_student_id, reason_for_borrowing, 
+                         attachment_url, -- (เพิ่มคอลัมน์นี้)
+                         lending_staff_id, due_date, 
                          status, approval_status, quantity) 
                       VALUES 
-                        (?, ?, ?, ?, ?, ?, ?, 
+                        (?, ?, ?, ?, ?, 
+                         ?, -- (เพิ่ม ? นี้)
+                         ?, ?, 
                          'borrowed', 'pending', 1)";
         
         $stmt_trans = $pdo->prepare($sql_trans);
+        // ✅ (5) แก้ไข execute
         $stmt_trans->execute([
-            $type_id, $item_id, $item_id, $student_id, $reason, $staff_id, $due_date
+            $type_id, $item_id, $item_id, $student_id, $reason, 
+            $attachment_url_to_db, // (เพิ่มตัวแปรนี้)
+            $staff_id, $due_date
         ]);
 
         $pdo->commit();

@@ -1,4 +1,6 @@
 <?php
+// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/admin/manage_items.php]
+
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 // ◀️ (แก้ไข) เพิ่ม ../ ◀️
 include('../includes/check_session.php'); 
@@ -60,15 +62,18 @@ include('../includes/header.php');
 
 <div class="header-row">
     <a href="admin/manage_equipment.php" class="btn btn-secondary" style="margin-right: 1rem;">
-        <i class="fas fa-arrow-left"></i> กลับไปหน้าประเภท
+        <i class="fas fa-arrow-left"></i> กลับ
     </a>
     <h2><i class="fas fa-list-ol"></i> จัดการอุปกรณ์รายชิ้น</h2>
-    
+</div>
+
+<div class="add-user-button-wrapper" style="margin-bottom: 1.5rem;">
     <button class="add-btn" 
             onclick="openAddItemPopup(<?php echo $type_id; ?>, '<?php echo htmlspecialchars(addslashes($type_info['name'])); ?>')">
         <i class="fas fa-plus"></i> เพิ่มอุปกรณ์ชิ้นใหม่
     </button>
 </div>
+
 
 <div class="section-card" style="margin-bottom: 1.5rem;">
     <h4><?php echo htmlspecialchars($type_info['name']); ?></h4>
@@ -79,7 +84,7 @@ include('../includes/header.php');
     </div>
 </div>
 
-<div class="table-container">
+<div class="table-container desktop-only">
     <?php if (isset($items_error)) echo "<p style='color: red; padding: 15px;'>$items_error</p>"; ?>
     <table>
         <thead>
@@ -89,8 +94,7 @@ include('../includes/header.php');
                 <th>เลขซีเรียล (S/N)</th>
                 <th>สถานะ</th>
                 <th>ข้อมูลการยืม (ถ้ามี)</th>
-                <th style="width: 150px;">จัดการ</th>
-            </tr>
+                <th style="width: 200px;">จัดการ</th> </tr>
         </thead>
         <tbody>
             <?php if (empty($items)): ?>
@@ -126,15 +130,21 @@ include('../includes/header.php');
                             <?php endif; ?>
                         </td>
                         <td class="action-buttons">
-                            <?php if ($status != 'borrowed'): ?>
-                                <button class="btn btn-manage btn-sm" onclick="openEditItemPopup(<?php echo $item['id']; ?>)">
-                                    <i class="fas fa-edit"></i> แก้ไข
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(<?php echo $item['id']; ?>, <?php echo $item['type_id']; ?>)">
-                                    <i class="fas fa-trash"></i> ลบ
-                                </button>
-                            <?php else: ?>
-                                <span class="text-muted" style="font-size: 0.9em;">(คืนของก่อน)</span>
+                            
+                            <button type="button" class="btn btn-manage btn-sm" title="แก้ไข" onclick="openEditItemPopup(<?php echo $item['id']; ?>)">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            
+                            <button type="button" class="btn btn-secondary btn-sm" title="ดูประวัติการยืม"
+                                    onclick="openItemHistoryPopup(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars(addslashes($item['name'])); ?>')">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            
+                            <?php if ($status != 'borrowed'): // (ป้องกันการลบตอนถูกยืมอยู่) ?>
+                            <button type="button" class="btn btn-danger btn-sm" title="ลบ" 
+                                    onclick="confirmDeleteItem(<?php echo $item['id']; ?>, <?php echo $item['type_id']; ?>)">
+                                <i class="fas fa-trash"></i>
+                            </button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -143,6 +153,75 @@ include('../includes/header.php');
         </tbody>
     </table>
 </div>
+
+<div class="student-card-list">
+    <?php if (isset($items_error)) echo "<p style='color: red; padding: 15px;'>$items_error</p>"; ?>
+
+    <?php if (empty($items)): ?>
+        <div class="history-card">
+            <p style="text-align: center; width: 100%;">ยังไม่มีอุปกรณ์รายชิ้นในประเภทนี้</p>
+        </div>
+    <?php else: ?>
+        <?php foreach ($items as $item): ?>
+            <div class="history-card">
+                
+                <div class="history-card-icon">
+                    <?php
+                    // (เลือกสีไอคอนตามสถานะ)
+                    $status = $item['status'];
+                    $badge_class = 'grey';
+                    $icon_class = 'fas fa-tools';
+                    if ($status == 'available') {
+                        $badge_class = 'green';
+                        $icon_class = 'fas fa-check-circle';
+                    } elseif ($status == 'borrowed') {
+                        $badge_class = 'blue'; // (ใช้ 'blue' สำหรับ 'borrowed' ใน dark mode จะชัดกว่า)
+                        $icon_class = 'fas fa-user-clock';
+                    } elseif ($status == 'maintenance') {
+                        $badge_class = 'yellow';
+                        $icon_class = 'fas fa-wrench';
+                    }
+                    ?>
+                    <span class="status-badge <?php echo $badge_class; ?>">
+                        <i class="<?php echo $icon_class; ?>"></i>
+                    </span>
+                </div>
+
+                <div class="history-card-info">
+                    <h4 class="truncate-text" title="<?php echo htmlspecialchars($item['name']); ?>">
+                        <?php echo htmlspecialchars($item['name']); ?> (ID: <?php echo $item['id']; ?>)
+                    </h4>
+                    <p>S/N: <?php echo htmlspecialchars($item['serial_number'] ?? '-'); ?></p>
+                    <?php if ($status == 'borrowed' && $item['student_name']): ?>
+                         <p style="font-size: 0.9em; color: var(--color-text-dark);">
+                            ยืมโดย: <strong><?php echo htmlspecialchars($item['student_name']); ?></strong>
+                        </p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="action-buttons" style="flex-shrink: 0;">
+                    <button type="button" class="btn btn-manage btn-sm" title="แก้ไข" onclick="openEditItemPopup(<?php echo $item['id']; ?>)">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary btn-sm" title="ดูประวัติการยืม"
+                            onclick="openItemHistoryPopup(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars(addslashes($item['name'])); ?>')">
+                        <i class="fas fa-history"></i>
+                    </button>
+                    
+                    <?php if ($item['status'] != 'borrowed'): ?>
+                    <button type="button" class="btn btn-danger btn-sm" title="ลบ" 
+                            onclick="confirmDeleteItem(<?php echo $item['id']; ?>, <?php echo $item['type_id']; ?>)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <?php endif; ?>
+                </div>
+
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
 
 <?php
 // 7. เรียกใช้ Footer

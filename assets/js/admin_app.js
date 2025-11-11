@@ -979,3 +979,81 @@ function openManageItemsPopup(typeId) {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         });
 }
+
+function openItemHistoryPopup(itemId, itemName) {
+    Swal.fire({
+        title: 'กำลังโหลดประวัติ...',
+        text: `สำหรับอุปกรณ์: ${itemName}`,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // (เรียก API ที่เราเพิ่งสร้าง)
+    fetch(`ajax/get_item_history.php?item_id=${itemId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status !== 'success') {
+                throw new Error(data.message);
+            }
+
+            let historyHtml = '';
+            
+            // (ตรวจสอบว่ามีประวัติหรือไม่)
+            if (data.history.length === 0) {
+                historyHtml = '<p style="text-align: center; padding: 1rem 0;">ยังไม่มีประวัติการยืมสำหรับอุปกรณ์ชิ้นนี้</p>';
+            } else {
+                // (สร้างตาราง HTML)
+                historyHtml = `
+                    <div style="text-align: left; max-height: 40vh; overflow-y: auto; margin-top: 1rem;">
+                        <table class="section-card" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>ผู้ยืม</th>
+                                    <th>วันที่ยืม</th>
+                                    <th>วันที่คืน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.history.map(row => {
+                                    // (แปลง Format วันที่ให้อ่านง่าย)
+                                    const borrowDate = new Date(row.borrow_date).toLocaleDateString('th-TH', {
+                                        day: 'numeric', month: 'short', year: 'numeric'
+                                    });
+                                    
+                                    // (ถ้ายังไม่คืน ให้แสดงเป็น - )
+                                    const returnDate = row.return_date 
+                                        ? new Date(row.return_date).toLocaleDateString('th-TH', {
+                                            day: 'numeric', month: 'short', year: 'numeric'
+                                          }) 
+                                        : '<span style="color: var(--color-text-muted);">(ยังไม่คืน)</span>';
+
+                                    return `
+                                        <tr>
+                                            <td>${row.borrower_name}</td>
+                                            <td>${borrowDate}</td>
+                                            <td>${returnDate}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // (แสดง Popup พร้อมผลลัพธ์)
+            Swal.fire({
+                title: `ประวัติการยืม: ${itemName}`,
+                html: historyHtml,
+                width: '600px',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: 'var(--color-primary)'
+            });
+
+        })
+        .catch(error => {
+            Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+        });
+}

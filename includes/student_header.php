@@ -1,5 +1,5 @@
 <?php
-// [napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/includes/student_header.php]
+// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/includes/student_header.php]
 // includes/student_header.php (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
 @session_start(); 
 ?>
@@ -26,7 +26,10 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
+    <link rel="icon" type="image/png" href="assets/img/logo.png" sizes="any">
+    
+    <link rel="stylesheet" href="assets/css/style.css?v=2.2">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
 </head>

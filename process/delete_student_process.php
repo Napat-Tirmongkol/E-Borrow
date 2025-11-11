@@ -1,11 +1,13 @@
 <?php
+// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/process/delete_student_process.php]
 // delete_student_process.php
 // (อัปเกรต: เพิ่มการบันทึก Log)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php'); // ◀️ (ใหม่) เรียกใช้ Log
+// ✅ (แก้ไข Path) เพิ่ม ../ และเปลี่ยนเป็นยามของ AJAX
+include('../includes/check_session_ajax.php'); 
+require_once('../includes/db_connect.php');
+require_once('../includes/log_function.php'); 
 
 // Set header to return JSON
 header('Content-Type: application/json');

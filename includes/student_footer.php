@@ -25,7 +25,10 @@ $active_page = $active_page ?? '';
     </a>
 </nav>
 
-<script src="assets/js/theme.js"></script>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="assets/js/student_app.js?v=<?php echo time(); ?>"></script>
+
+<script src="assets/js/theme.js?v=<?php echo time(); ?>"></script>
 
 </body>
 </html>

@@ -3,8 +3,10 @@
 // เก็บค่าลับสำหรับ LINE Login
 
 // *** กรุณากรอกค่าจริงที่คุณได้จาก LINE Developers Console ***
-define('LINE_LOGIN_CHANNEL_ID', '2008443668');
-define('LINE_LOGIN_CHANNEL_SECRET', '8cfb63fcecc45c76fe49d0cab9d42e9c');
+define('LINE_LOGIN_CHANNEL_ID', '2008476166');
+define('LINE_LOGIN_CHANNEL_SECRET', '991a612c343dc2ed766cf399a4913cf5');
+
+define('LINE_MESSAGING_API_TOKEN', 'dO49wXbHvt22YCTmZFqyVWtBXLgG+HzsvptogPUU7V79hAIbHZ7ik0onvRCbkmhvLsBoEnKV5HxhbhHqpx5L/IE1zc8vA3WsgWYOYSQFLXvcFCgHwEy99DJf4LZeBcyzEYFXjgDENVvj65bH8Nhw4QdB04t89/1O/w1cDnyilFU=');
 
 // 1. (แก้ไข) กำหนด Base URL ให้ถูกต้อง (ตามโฟลเดอร์ของคุณ)
 $base_url = "https://healthycampus.rsu.ac.th/e_Borrow_test";

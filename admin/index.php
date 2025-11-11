@@ -24,6 +24,7 @@ try {
                         t.borrow_date, 
                         t.due_date,
                         t.reason_for_borrowing,
+                        t.attachment_url, -- (เพิ่มคอลัมน์นี้)
                         et.name as equipment_name,
                         s.full_name as student_name,
                         u.full_name as staff_name
@@ -151,12 +152,23 @@ include('../includes/header.php');
                                 <p>
                                     กำหนดคืน: <strong><?php echo date('d/m/Y', strtotime($request['due_date'])); ?></strong>
                                 </p>
-                                <a href="javascript:void(0)" 
-                                   onclick="showReasonPopup('<?php echo htmlspecialchars(addslashes($request['reason_for_borrowing'])); ?>')" 
-                                   style="font-size: 0.9em; text-decoration: underline; color: var(--color-primary);">
-                                   ดูเหตุผล
-                                </a>
-                            </div>
+
+                                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 5px;">
+                                    <a href="javascript:void(0)" 
+                                       onclick="showReasonPopup('<?php echo htmlspecialchars(addslashes($request['reason_for_borrowing'])); ?>')" 
+                                       style="font-size: 0.9em; text-decoration: underline; color: var(--color-primary);">
+                                       <i class="fas fa-comment-dots"></i> ดูเหตุผล
+                                    </a>
+                                    
+                                    <?php if (!empty($request['attachment_url'])): ?>
+                                        <a href="<?php echo htmlspecialchars($request['attachment_url']); ?>" 
+                                           target="_blank"
+                                           style="font-size: 0.9em; text-decoration: underline; color: var(--color-info);">
+                                           <i class="fas fa-file-alt"></i> ดูเอกสารแนบ
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                                </div>
                             
                             <div class="pending-card-actions">
                                 <button type="button" 
@@ -178,7 +190,9 @@ include('../includes/header.php');
             
             </div>
         </div>
-    </div> <div class="container">
+    </div>
+	
+	<div class="container">
         <h2><i class="fas fa-calendar-times" style="color: var(--color-danger);"></i> รายการที่เกินกำหนดคืน</h2>
         <div class="container-content">
             <?php if (isset($overdue_error)) echo "<p style='color: red;'>$overdue_error</p>"; ?>

@@ -30,7 +30,7 @@ try {
 
 // 4. ตั้งค่าตัวแปรสำหรับ Header
 $page_title = "ประวัติคำขอ";
-$active_page = 'history'; // ◀️ (สำคัญ) บอก Footer ว่าเมนูไหน Active
+$active_page = 'history'; 
 include('includes/student_header.php');
 ?>
 
@@ -56,28 +56,38 @@ include('includes/student_header.php');
                         $badge_class = 'grey';
                         $badge_text = htmlspecialchars($row['approval_status']);
                         $icon_class = 'fas fa-question-circle'; // Default
+                        $is_pending = false; // (ตัวแปรใหม่)
                         
                         // (เราจะเช็ค status ที่ 'returned' ก่อน)
                         if ($row['status'] == 'returned') {
                             $badge_class = 'green';
                             $badge_text = 'คืนแล้ว';
                             $icon_class = 'fas fa-check-circle';
+                            
+                            // (เช็คว่าเป็นการปฏิเสธ หรือยกเลิก)
+                            if ($row['approval_status'] == 'rejected') {
+                                $badge_class = 'grey';
+                                $badge_text = 'ถูกปฏิเสธ/ยกเลิก';
+                                $icon_class = 'fas fa-times-circle';
+                            }
+
                         } 
                         // (ถ้าไม่ใช่ 'returned' ค่อยเช็ค approval_status)
                         elseif ($row['approval_status'] == 'pending') {
                             $badge_class = 'yellow';
                             $badge_text = 'รอดำเนินการ';
                             $icon_class = 'fas fa-hourglass-half';
-                        } elseif ($row['approval_status'] == 'rejected') {
+                            $is_pending = true; // (ตั้งค่าว่า Pending = true)
+                        } 
+                        // (โค้ดเดิมสำหรับ rejected เผื่อมี)
+                        elseif ($row['approval_status'] == 'rejected') {
                             $badge_class = 'grey';
                             $badge_text = 'ถูกปฏิเสธ';
                             $icon_class = 'fas fa-times-circle';
                         }
                     ?>
 
-                    <div class="history-card">
-                        
-                        <div class="history-card-icon">
+                    <div class="history-card"> <div class="history-card-icon">
                             <span class="status-badge <?php echo $badge_class; ?>">
                                 <i class="<?php echo $icon_class; ?>"></i>
                             </span>
@@ -90,9 +100,17 @@ include('includes/student_header.php');
                             </p>
                         </div>
                         
-                        <div class="history-card-status">
+                        <div class="pending-card-actions">
                             <span class="status-badge <?php echo $badge_class; ?>"><?php echo $badge_text; ?></span>
-                        </div>
+
+                            <?php if ($is_pending): ?>
+                                <button type="button" 
+                                        class="btn btn-danger btn-sm" 
+                                        style="margin-top: 5px;" onclick="confirmCancelRequest(<?php echo $row['id']; ?>)">
+                                    <i class="fas fa-trash-alt"></i> ยกเลิก
+                                </button>
+                            <?php endif; ?>
+                            </div>
                     </div>
                 
                 <?php endforeach; ?>

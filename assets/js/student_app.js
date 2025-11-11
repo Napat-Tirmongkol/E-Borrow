@@ -1,4 +1,4 @@
-// [สร้างไฟล์ใหม่: assets/js/student_app.js]
+// [แก้ไขไฟล์: assets/js/student_app.js]
 
 // =========================================
 // 1. โค้ดสำหรับ borrow.php (Live Search & Popup)
@@ -7,94 +7,89 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // (ตรวจสอบก่อนว่า element ของ borrow.php มีอยู่จริงหรือไม่)
     const searchInput = document.getElementById('liveSearchInput');
-    const resultsContainer = document.getElementById('search-results-container');
-    const gridContainer = document.getElementById('equipment-grid-container');
-    const clearBtn = document.getElementById('clearSearchBtn');
     
     // (ถ้าไม่เจอ element เหล่านี้ = ไม่ได้อยู่หน้า borrow.php ก็ให้หยุด)
-    if (!searchInput || !resultsContainer || !gridContainer || !clearBtn) {
-        return; // หยุดการทำงานส่วนนี้
-    }
+    if (searchInput) {
+        const resultsContainer = document.getElementById('search-results-container');
+        const gridContainer = document.getElementById('equipment-grid-container');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        let searchTimeout; 
 
-    let searchTimeout; 
+        searchInput.addEventListener('keyup', () => {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            
+            if (query.length === 0) {
+                hideResults();
+                return;
+            }
 
-    searchInput.addEventListener('keyup', () => {
-        clearTimeout(searchTimeout);
-        const query = searchInput.value.trim();
-        
-        // (ปรับปรุง) ถ้า query ว่าง ให้ซ่อนผลลัพธ์ทันที
-        if (query.length === 0) {
-            hideResults();
-            return;
-        }
-
-        if (query.length < 2) { 
-            // (ถ้าพิมพ์น้อยไป อาจยังไม่ต้องค้นหา)
-             resultsContainer.style.display = 'none';
-             return; 
-        }
-        
-        searchTimeout = setTimeout(() => { performSearch(query); }, 300);
-    });
-
-    function performSearch(query) {
-        clearBtn.style.display = 'flex';
-        gridContainer.style.display = 'none';
-        resultsContainer.style.display = 'block';
-        resultsContainer.innerHTML = '<p style="padding: 1rem; text-align: center;">กำลังค้นหา...</p>';
-
-        fetch(`ajax/live_search_equipment.php?term=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success' && data.results.length > 0) {
-                    displayResults(data.results);
-                } else {
-                    resultsContainer.innerHTML = '<p style="padding: 1rem; text-align: center;">ไม่พบอุปกรณ์ที่ตรงกับคำค้นหา</p>';
-                }
-            })
-            .catch(error => {
-                resultsContainer.innerHTML = `<p style="padding: 1rem; text-align: center; color: red;">เกิดข้อผิดพลาด: ${error.message}</p>`;
-            });
-    }
-
-    function displayResults(results) {
-        resultsContainer.innerHTML = ''; 
-        results.forEach(item => {
-            let imageHtml = ''; 
-            if (item.image_url) {
-                imageHtml = `<img src="${escapeJS(item.image_url)}" alt="${escapeJS(item.name)}" class="search-result-image" onerror="this.parentElement.innerHTML = '<div class=\'search-result-image-placeholder\'><i class=\'fas fa-image\'></i></div>'">`;
-            } else {
-                imageHtml = `<div class="search-result-image-placeholder"><i class="fas fa-camera"></i></div>`;
+            if (query.length < 2) { 
+                 resultsContainer.style.display = 'none';
+                 return; 
             }
             
-            // (สำคัญ) ต้องแน่ใจว่าฟังก์ชัน openRequestPopup อยู่ใน global scope
-            const itemHtml = `
-                <div class="search-result-item" role="button" onclick="openRequestPopup(${item.id}, '${escapeJS(item.name)}')">
-                    ${imageHtml} <div class="search-result-info">
-                        <h4>${item.name}</h4>
-                        <p>ว่าง: ${item.available_quantity || 0} ชิ้น</p> 
-                    </div>
-                </div>`;
-            resultsContainer.innerHTML += itemHtml;
+            searchTimeout = setTimeout(() => { performSearch(query); }, 300);
         });
-    }
 
-    function hideResults() {
-        clearBtn.style.display = 'none';
-        resultsContainer.style.display = 'none';
-        resultsContainer.innerHTML = '';
-        gridContainer.style.display = 'grid'; 
-    }
+        function performSearch(query) {
+            clearBtn.style.display = 'flex';
+            gridContainer.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = '<p style="padding: 1rem; text-align: center;">กำลังค้นหา...</p>';
 
-    clearBtn.addEventListener('click', () => {
-        searchInput.value = ''; 
-        hideResults(); 
-    });
+            fetch(`ajax/live_search_equipment.php?term=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.results.length > 0) {
+                        displayResults(data.results);
+                    } else {
+                        resultsContainer.innerHTML = '<p style="padding: 1rem; text-align: center;">ไม่พบอุปกรณ์ที่ตรงกับคำค้นหา</p>';
+                    }
+                })
+                .catch(error => {
+                    resultsContainer.innerHTML = `<p style="padding: 1rem; text-align: center; color: red;">เกิดข้อผิดพลาด: ${error.message}</p>`;
+                });
+        }
 
-    function escapeJS(str) {
-        if (!str) return '';
-        return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
-    }
+        function displayResults(results) {
+            resultsContainer.innerHTML = ''; 
+            results.forEach(item => {
+                let imageHtml = ''; 
+                if (item.image_url) {
+                    imageHtml = `<img src="${escapeJS(item.image_url)}" alt="${escapeJS(item.name)}" class="search-result-image" onerror="this.parentElement.innerHTML = '<div class=\'search-result-image-placeholder\'><i class=\'fas fa-image\'></i></div>'">`;
+                } else {
+                    imageHtml = `<div class="search-result-image-placeholder"><i class="fas fa-camera"></i></div>`;
+                }
+                
+                const itemHtml = `
+                    <div class="search-result-item" role="button" onclick="openRequestPopup(${item.id}, '${escapeJS(item.name)}')">
+                        ${imageHtml} <div class="search-result-info">
+                            <h4>${item.name}</h4>
+                            <p>ว่าง: ${item.available_quantity || 0} ชิ้น</p> 
+                        </div>
+                    </div>`;
+                resultsContainer.innerHTML += itemHtml;
+            });
+        }
+
+        function hideResults() {
+            clearBtn.style.display = 'none';
+            resultsContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
+            gridContainer.style.display = 'grid'; 
+        }
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = ''; 
+            hideResults(); 
+        });
+
+        function escapeJS(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    } // (จบ if (searchInput))
 
 });
 
@@ -121,9 +116,10 @@ function openRequestPopup(typeId, typeName) {
             } else {
                 staffOptions = '<option value="" disabled>ไม่มีข้อมูลพนักงาน</option>';
             }
+            
+            // ✅ (1) แก้ไข formHtml 
             const formHtml = `
-                <form id="swalRequestForm" style="text-align: left; margin-top: 20px;">
-                    <input type="hidden" name="type_id" value="${typeId}">
+                <form id="swalRequestForm" style="text-align: left; margin-top: 20px;" enctype="multipart/form-data"> <input type="hidden" name="type_id" value="${typeId}">
                     
                     <div style="margin-bottom: 15px;">
                         <label for="swal_reason" style="font-weight: bold; display: block; margin-bottom: 5px;">1. เหตุผลการยืม: <span style="color:red;">*</span></label>
@@ -140,6 +136,12 @@ function openRequestPopup(typeId, typeName) {
                     <div style="margin-bottom: 15px;">
                         <label for="swal_due_date" style="font-weight: bold; display: block; margin-bottom: 5px;">3. วันที่กำหนดคืน: <span style="color:red;">*</span></label>
                         <input type="date" name="due_date" id="swal_due_date" required 
+                               style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="swal_attachment" style="font-weight: bold; display: block; margin-bottom: 5px;">4. เอกสารแนบ (ถ้ามี):</label>
+                        <input type="file" name="attachment_file" id="swal_attachment" 
                                style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
                     </div>
                 </form>`;
@@ -165,6 +167,7 @@ function openRequestPopup(typeId, typeName) {
                         return false;
                     }
                     
+                    // (โค้ด fetch นี้ไม่ต้องแก้ เพราะ new FormData(form) จะดึงไฟล์ไปเองอัตโนมัติ)
                     return fetch('process/request_borrow_process.php', {
                         method: 'POST',
                         body: new FormData(form)
@@ -191,8 +194,6 @@ function openRequestPopup(typeId, typeName) {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
         });
 }
-
-
 // =========================================
 // 2. โค้ดสำหรับ create_profile.php (Validation & Terms)
 // =========================================
@@ -241,29 +242,32 @@ function openTermsPopup() {
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // (ตรวจสอบว่าเราอยู่ในหน้า create_profile หรือไม่)
-    const profileForm = document.getElementById('profileForm');
-    if (!profileForm) {
-        return; // ถ้าไม่ใช่หน้า profile ก็หยุดทำงานส่วนนี้
-    }
-
+    // ✅ (1) (แก้ไข) เราจะตรวจสอบจาก 'terms_agree' ซึ่งมีแค่ในหน้า create_profile.php
     const termsCheck = document.getElementById('terms_agree');
-    const submitBtn = document.getElementById('submitBtn');
 
-    submitBtn.disabled = true; // (เริ่มแรกให้ปุ่มกดไม่ได้)
+    // (ถ้าไม่เจอ = เราอยู่หน้า profile.php หรือหน้าอื่น)
+    if (termsCheck) {
+        
+        // (ถ้าโค้ดทำงานต่อ แสดงว่าเราอยู่หน้า create_profile.php แน่นอน)
+        const profileForm = document.getElementById('profileForm');
+        const submitBtn = document.getElementById('submitBtn'); // <-- ตัวนี้จะไม่ null แล้ว
 
-    termsCheck.addEventListener('change', function() {
-        if (this.checked) {
-            submitBtn.disabled = false; // (เปิดปุ่ม)
-        } else {
-            submitBtn.disabled = true; // (ปิดปุ่ม)
-        }
-    });
+        submitBtn.disabled = true; // (เริ่มแรกให้ปุ่มกดไม่ได้)
 
-    submitBtn.addEventListener('click', function(event) {
-        event.preventDefault(); // (ป้องกันการ submit จริงก่อน)
-        confirmSaveProfile();
-    });
+        termsCheck.addEventListener('change', function() {
+            if (this.checked) {
+                submitBtn.disabled = false; // (เปิดปุ่ม)
+            } else {
+                submitBtn.disabled = true; // (ปิดปุ่ม)
+            }
+        });
+
+        submitBtn.addEventListener('click', function(event) {
+            event.preventDefault(); // (ป้องกันการ submit จริงก่อน)
+            confirmSaveProfile();
+        });
+    } // (จบ if (termsCheck))
+    
 });
 
 function confirmSaveProfile() {
@@ -301,6 +305,54 @@ function confirmSaveProfile() {
     }).then((result) => {
         if (result.isConfirmed) {
             form.submit();
+        }
+    });
+}
+
+
+// =========================================
+// 3. โค้ดสำหรับ history.php (Cancel Request)
+// =========================================
+function confirmCancelRequest(transactionId) {
+    Swal.fire({
+        title: "ยืนยันการยกเลิก?",
+        text: "คุณต้องการยกเลิกคำขอยืมนี้ใช่หรือไม่? (อุปกรณ์จะถูกคืนเข้าสต็อก)",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33", // (สีแดง)
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "ใช่, ยกเลิกเลย",
+        cancelButtonText: "ไม่"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            
+            // (แสดง Loading)
+            Swal.fire({
+                title: 'กำลังยกเลิก...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            // (ส่งข้อมูลไปที่ API ใหม่ที่เราสร้าง)
+            const formData = new FormData();
+            formData.append('transaction_id', transactionId);
+
+            fetch('process/cancel_request_process.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire('ยกเลิกสำเร็จ!', data.message, 'success')
+                    .then(() => location.reload()); // (รีโหลดหน้า)
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('เกิดข้อผิดพลาด AJAX', error.message, 'error');
+            });
         }
     });
 }
