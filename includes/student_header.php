@@ -1,4 +1,5 @@
 <?php
+// [napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/includes/student_header.php]
 // includes/student_header.php (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
 @session_start(); 
 ?>
@@ -47,4 +48,4 @@
         </div>
     </header>
 
-    <main class="content" style="margin-left: 0; margin-top: 60px;">
+    <main class="content">

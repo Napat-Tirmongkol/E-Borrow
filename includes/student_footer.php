@@ -1,4 +1,5 @@
 <?php
+// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/includes/student_footer.php]
 // includes/student_footer.php
 
 $active_page = $active_page ?? ''; 
@@ -24,35 +25,7 @@ $active_page = $active_page ?? '';
     </a>
 </nav>
 
-<script>
-try {
-    // (1. สคริปต์ "อ่านธีม" - ทำงานทันทีที่โหลด)
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-    }
+<script src="assets/js/theme.js"></script>
 
-    // (2. สคริปต์ "สลับธีม" - รอการคลิก)
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', function() {
-            if (document.body.classList.contains('dark-mode')) {
-                // --- (จากมืด -> ไปสว่าง) ---
-                document.documentElement.classList.remove('dark-mode');
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('theme', 'light');
-            } else {
-                // --- (จากสว่าง -> ไปมืด) ---
-                document.documentElement.classList.add('dark-mode');
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('theme', 'dark');
-            }
-        });
-    }
-} catch (e) {
-    console.error('Theme toggle script error:', e);
-}
-</script>
 </body>
 </html>

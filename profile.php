@@ -29,7 +29,7 @@ $active_page = 'settings'; // (บอก Footer ว่าเมนูไหน A
 include('includes/student_header.php');
 ?>
 
-<div class="main-container">
+<main class="main-container">
 
     <?php 
     // (ส่วนสำหรับแสดงข้อความ Success หรือ Error หลังจากกดบันทึก)

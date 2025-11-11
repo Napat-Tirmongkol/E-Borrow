@@ -1,4 +1,5 @@
 <?php
+// [napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/index.php]
 // index.php (student_dashboard.php เดิม)
 // (หน้าแรกของผู้ใช้งาน, แสดงรายการที่กำลังยืม)
 
@@ -55,7 +56,7 @@ include('includes/student_header.php');
     }
 </style>
 
-<main class="main-container">
+<div class="main-container">
 
     <?php if (isset($error_message)): ?>
         <div class="alert alert-danger"><?php echo $error_message; ?></div>

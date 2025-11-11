@@ -1,4 +1,5 @@
 <?php
+// [napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/history.php]
 // request_history.php (หน้าประวัติคำขอ - Layout ใหม่)
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
@@ -33,7 +34,7 @@ $active_page = 'history'; // ◀️ (สำคัญ) บอก Footer ว่า
 include('includes/student_header.php');
 ?>
 
-<main class="main-container">
+<div class="main-container">
 
     <div class="section-card" style="background: none; box-shadow: none; padding: 0;">
         <h2 class="section-title">ประวัติคำขอที่ผ่านมา</h2>
