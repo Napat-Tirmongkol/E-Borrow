@@ -25,36 +25,79 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // ✅ (3) เพิ่ม: ส่วนจัดการไฟล์อัปโหลด
-    $attachment_url_to_db = null;
-    try {
-        if (isset($_FILES['attachment_file']) && $_FILES['attachment_file']['error'] == 0) {
-            
-            $upload_dir_server = '../uploads/attachments/'; // Path สำหรับ Server (PHP)
-            $upload_dir_db = 'uploads/attachments/';     // Path สำหรับ Database (HTML)
-            
-            if (!is_dir($upload_dir_server)) {
-                mkdir($upload_dir_server, 0755, true);
-            }
-            
-            // (ป้องกันชื่อไฟล์ภาษาไทย หรืออักขระแปลกๆ)
-            $original_filename = basename($_FILES['attachment_file']['name']);
-            $safe_filename = preg_replace('/[^A-Za-z0-9\._-]/', '', str_replace(' ', '_', $original_filename));
-            $new_filename = 'req-' . uniqid() . '-' . $safe_filename;
+$attachment_url = NULL;
 
-            $target_file_server = $upload_dir_server . $new_filename;
-            $target_file_db = $upload_dir_db . $new_filename;
+if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+    
+    $file_tmp = $_FILES['attachment']['tmp_name'];
+    $file_name = $_FILES['attachment']['name'];
+    $file_size = $_FILES['attachment']['size'];
+    
+    // 1. กำหนดนามสกุลที่อนุญาต (Whitelist) - ห้าม .php, .exe เด็ดขาด
+    $allowed_extensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+    
+    // 2. กำหนด MIME Types ที่อนุญาต (ตรวจสอบไส้ในไฟล์)
+    $allowed_mimes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint', 
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
 
-            if (move_uploaded_file($_FILES['attachment_file']['tmp_name'], $target_file_server)) {
-                $attachment_url_to_db = $target_file_db;
-            } else {
-                throw new Exception("ไม่สามารถย้ายไฟล์ที่อัปโหลดได้");
-            }
-        }
-    } catch (Exception $e) {
-        // (ถ้าอัปโหลดไฟล์ล้มเหลว ก็ไม่เป็นไร ให้ดำเนินการต่อโดยไม่มีไฟล์)
-        error_log("File upload failed: " . $e->getMessage());
+    // แยกนามสกุลไฟล์
+    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+    // ตรวจสอบ 1: นามสกุลต้องตรงกับที่อนุญาต
+    if (!in_array($file_ext, $allowed_extensions)) {
+        $_SESSION['error'] = "อนุญาตเฉพาะไฟล์เอกสาร (PDF, Word, Excel) เท่านั้น";
+        header("Location: ../borrow.php"); 
+        exit;
     }
-    // ✅ (จบส่วนจัดการไฟล์)
+
+    // ตรวจสอบ 2: ตรวจ MIME Type จริงของไฟล์ (กันการปลอมนามสกุล)
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file_tmp);
+    finfo_close($finfo);
+
+    if (!in_array($mime_type, $allowed_mimes)) {
+        $_SESSION['error'] = "ไฟล์ไม่ถูกต้อง หรืออาจเป็นไฟล์อันตราย";
+        header("Location: ../borrow.php");
+        exit;
+    }
+
+    // ตรวจสอบ 3: ขนาดไฟล์ (เช่น ไม่เกิน 5MB)
+    if ($file_size > 5 * 1024 * 1024) {
+        $_SESSION['error'] = "ไฟล์มีขนาดใหญ่เกินไป (ห้ามเกิน 5MB)";
+        header("Location: ../borrow.php");
+        exit;
+    }
+
+    // 3. ตั้งชื่อไฟล์ใหม่ (Random Name) เพื่อป้องกันไฟล์ทับกันและป้องกันชื่อไฟล์อันตราย
+    // เช่น เปลี่ยน "hack.php.pdf" เป็น "req-65123ab123.pdf"
+    $new_filename = "doc-" . uniqid() . "." . $file_ext;
+    $upload_dir = '../uploads/attachments/';
+    
+    // สร้างโฟลเดอร์ถ้ายังไม่มี
+    if (!file_exists($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+        // สร้างไฟล์ .htaccess เพื่อป้องกันการรันสคริปต์ในโฟลเดอร์นี้ (ความปลอดภัยสูงสุด)
+        file_put_contents($upload_dir . '.htaccess', "Order Deny,Allow\nDeny from all\n<FilesMatch '\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$'>\nAllow from all\n</FilesMatch>");
+    }
+
+    $destination = $upload_dir . $new_filename;
+
+    if (move_uploaded_file($file_tmp, $destination)) {
+        // เก็บ Path ลงฐานข้อมูล (ตัด ../ ออก)
+        $attachment_url = 'uploads/attachments/' . $new_filename;
+    } else {
+        $_SESSION['error'] = "เกิดข้อผิดพลาดในการอัปโหลดไฟล์";
+        header("Location: ../borrow.php");
+        exit;
+    }
+}
 
 
     // 3. เริ่ม Transaction

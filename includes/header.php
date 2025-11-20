@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body> <header class="header"> 
-        <h1>MedLoan - (Admin)</h1>
+        <h1>E-Borrow - (ระบบ ยืม-คืน อุปกรณ์)</h1>
         
         <div class="user-info"> 
             

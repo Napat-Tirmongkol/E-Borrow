@@ -118,16 +118,18 @@ include('../includes/header.php');
         <h2><i class="fas fa-tachometer-alt"></i> ภาพรวมระบบ</h2>
         
         <a href="admin/walkin_borrow.php" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.7rem 1.2rem;">
-            <i class="fas fa-qrcode"></i> สแกนยืม (Walk-in)
+            <i class="fas fa-qrcode"></i> สแกนยืม
         </a>
     </div>
 
+<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') : ?>
 <div class="section-card" style="margin-bottom: 1.5rem;">
-    <h2 class="section-title">ภาพรวมสถานะอุปกรณ์ทั้งหมด</h2>
+    <h2 class="section-title">สถานะอุปกรณ์ทั้งหมด</h2>
     <div style="width: 100%; max-width: 400px; margin: 0 auto;">
         <canvas id="equipmentStatusChart"></canvas>
     </div>
 </div>
+<?php endif; ?>
 
 <div class="dashboard-grid">
 
