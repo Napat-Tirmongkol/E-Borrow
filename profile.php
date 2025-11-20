@@ -28,7 +28,7 @@ $page_title = "ตั้งค่าโปรไฟล์";
 $active_page = 'settings'; // (บอก Footer ว่าเมนูไหน Active)
 include('includes/student_header.php');
 ?>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <main class="main-container">
 
     <?php 
@@ -92,7 +92,46 @@ include('includes/student_header.php');
         </form>
     </div>
 </div> 
+<script>
+function showMyQRCode() {
+    // ดึงรหัสนักศึกษา และชื่อ จาก PHP มาใส่ในตัวแปร JS
+    const studentCode = "<?php echo htmlspecialchars($student['student_personnel_id']); ?>"; 
+    const studentName = "<?php echo htmlspecialchars($student['full_name']); ?>";
+    
+    // (สำคัญ) สร้างข้อมูลสำหรับ QR Code 
+    // รูปแบบ: "MEDLOAN_STUDENT:รหัสนักศึกษา"
+    // การใส่ Prefix "MEDLOAN_STUDENT:" ช่วยให้ระบบรู้ว่านี่คือ QR ของเราจริงๆ ไม่ใช่ QR จ่ายเงิน
+    const qrData = "MEDLOAN_STUDENT:" + studentCode;
 
+    // แสดง Popup ด้วย SweetAlert2
+    Swal.fire({
+        title: 'บัตรประจำตัวดิจิทัล',
+        html: `
+            <div style="display: flex; justify-content: center; align-items: center; margin: 20px 0; padding: 10px; background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div id="qrcode-container"></div>
+            </div>
+            <h3 style="margin-bottom: 5px;">${studentCode}</h3>
+            <p style="color: #666;">${studentName}</p>
+            <p class="text-muted" style="font-size: 0.9em; margin-top: 15px;">
+                <i class="fas fa-info-circle"></i> ยื่นให้เจ้าหน้าที่สแกนเพื่อยืมอุปกรณ์
+            </p>
+        `,
+        didOpen: () => {
+            // สั่งให้ Library วาด QR Code ลงใน div id="qrcode-container"
+            new QRCode(document.getElementById("qrcode-container"), {
+                text: qrData,
+                width: 220,
+                height: 220,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H // ระดับความชัดสูง (เผื่อโลโก้บัง)
+            });
+        },
+        confirmButtonText: 'ปิด',
+        confirmButtonColor: '#6c757d'
+    });
+}
+</script>
 <?php
 // 5. เรียกใช้ Footer
 include('includes/student_footer.php'); 

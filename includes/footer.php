@@ -59,6 +59,8 @@ $user_role = $_SESSION['role'] ?? 'employee'; // (ดึง Role ปัจจุ
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script src="assets/js/theme.js"></script>
-<script src="assets/js/admin_app.js"></script> </body>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<script src="assets/js/theme.js?v=<?php echo time(); ?>"></script>
+<script src="assets/js/admin_app.js?v=<?php echo time(); ?>"></script>
 </html>

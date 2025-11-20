@@ -427,14 +427,22 @@ body {
  * (ใหม่) สไตล์สำหรับ Student Dashboard V4 (Layout 6 ข้อ)
  * ========================================= */
 
-/* (ข้อ 1) Container กลาง */
 .main-container {
-  max-width: 1100px;
-  margin: 0 auto; /* จัดให้อยู่กลางแนวนอน */
-  display: flex;
-  flex-direction: column;
-  gap: 2rem; /* (ข้อ 1) ระยะห่างระหว่าง section */
-  padding-top: 1.5rem;
+    max-width: 1200px; /* ✅ กำหนดความกว้างสูงสุด */
+    margin: 0 auto; /* ✅ (สำคัญ) จัดให้อยู่กึ่งกลางแนวนอน */
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1.5rem 2rem; /* ✅ เพิ่ม Padding ด้านข้าง/บน/ล่าง สำหรับ Desktop */
+}
+
+/* การปรับปรุงสำหรับ Mobile */
+@media (max-width: 768px) {
+    /* (โค้ดนี้ใช้ร่วมกับโค้ดที่เราใส่ใน walkin_borrow.php เพื่อให้ footer นิ่ง) */
+    .main-container {
+        padding: 1rem 1rem 80px 1rem; /* ลด Padding ด้านข้าง และเพิ่ม Padding ด้านล่างเผื่อ Footer */
+        margin: 0; /* ไม่ต้องมี margin auto บนมือถือ */
+    }
 }
 
 /* (ข้อ 3) Card */
@@ -1631,4 +1639,85 @@ body.dark-mode .item-thumbnail.equipment-card-image-placeholder {
 }
 body.dark-mode .item-details small {
     color: var(--color-text-muted);
+}
+
+/* [เพิ่มท้ายไฟล์: assets/css/style.css] */
+
+/* =========================================
+   Dark Mode Fixes: หน้า Walk-in Borrow
+   ========================================= */
+
+/* 1. แก้สีตัวหนังสือหัวข้อ (Label) ให้เป็นสีขาว */
+body.dark-mode .form-group label {
+    color: #e2e8f0;
+    font-weight: 500;
+}
+
+/* 2. แก้สีกล่องข้อมูลผู้ยืมและอุปกรณ์ (Override Inline Styles) */
+body.dark-mode #student-info-box,
+body.dark-mode #item-info-box {
+    background-color: #2d3748 !important; /* พื้นหลังสีเทาเข้ม */
+    border-left: 4px solid #4a5568 !important; /* เส้นขอบซ้ายสีเทา */
+    color: #e2e8f0 !important; /* ตัวหนังสือสีขาว */
+    border: 1px solid #4a5568; /* เพิ่มขอบรอบๆ */
+}
+
+/* 3. แก้สีชื่อคน และ ชื่อของ ในกล่องข้อมูล */
+body.dark-mode #student-display,
+body.dark-mode #student-display strong,
+body.dark-mode #scanned-item-display, 
+body.dark-mode #scanned-item-name {
+    color: #63b3ed !important; /* สีฟ้าอ่อน อ่านง่าย */
+}
+
+body.dark-mode #student-display small {
+    color: #a0aec0 !important; /* สีเทาอ่อน */
+}
+
+/* 4. แก้สีช่องกรอกข้อมูล (Input & Select) */
+body.dark-mode .form-control {
+    background-color: #1a202c; /* พื้นหลัง Input มืด */
+    border: 1px solid #4a5568;
+    color: #fff; /* ตัวหนังสือขาว */
+}
+
+/* 5. แก้ไอคอนปฏิทินให้เป็นสีขาว (สำหรับ Chrome/Edge) */
+body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+/* 6. ปรับสีข้อความแจ้งเตือน */
+body.dark-mode .text-muted {
+    color: #a0aec0 !important;
+}
+
+/* ทำให้ปุ่ม Primary สว่างขึ้นเมื่ออยู่ใน Dark Mode เพื่อเพิ่ม Contrast */
+body.dark-mode .btn-primary {
+    background-color: #68d391 !important; /* ใช้สีเขียวที่สว่างขึ้นมาก */
+    border-color: #48bb78 !important;
+    color: #1a202c !important; /* บังคับให้เป็นสีเข้ม (ดำ) เพื่อให้มองเห็นชัดเจน */
+    font-weight: bold;
+}
+
+/* [เพิ่มท้ายไฟล์: assets/css/style.css] */
+
+/* =========================================
+   Fix: Barcode button visibility on Mobile Tables
+   ========================================= */
+
+@media (max-width: 992px) {
+    /* บังคับปุ่มทั้งหมดในช่อง 'จัดการ' ของตารางให้แสดงผล (สำคัญมาก) */
+    .table-container .action-buttons button {
+        display: inline-block !important; 
+        /* ป้องกันไม่ให้ display: none จาก CSS ทั่วไปของตาราง*/
+        margin: 2px; /* เพิ่มระยะห่างเล็กน้อย */
+        padding: 4px 6px; /* ลดขนาดปุ่มลง */
+    }
+    
+    /* ปรับความกว้างของช่องจัดการให้พอดีกับปุ่ม */
+    .table-container th:last-child, 
+    .table-container td:last-child {
+        min-width: 140px; /* ให้มีพื้นที่พอสำหรับ 3-4 ปุ่ม */
+    }
 }
