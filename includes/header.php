@@ -1,5 +1,5 @@
 <?php
-// includes/header.php (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
+// includes/header.php
 @session_start(); 
 ?>
 <!DOCTYPE html>
@@ -17,7 +17,6 @@
             try {
                 const theme = localStorage.getItem('theme');
                 if (theme === 'dark') {
-                    // (เราจะเพิ่มคลาสให้ <html> ซึ่งปลอดภัยและทำงานได้ทันที)
                     document.documentElement.classList.add('dark-mode');
                 }
             } catch (e) { 
@@ -26,14 +25,16 @@
         })();
     </script>
     
-<link rel="icon" type="image/png" href="assets/img/logo.png" sizes="any">
+    <link rel="icon" type="image/png" href="assets/img/logo.png" sizes="any">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <link rel="stylesheet" href="assets/css/style.css?v=2.2">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body> <header class="header"> 
-        <h1>MedLoan - (Admin)</h1>
+        <h1>E-Borrow - (ระบบ ยืม-คืน อุปกรณ์)</h1>
         
         <div class="user-info"> 
             

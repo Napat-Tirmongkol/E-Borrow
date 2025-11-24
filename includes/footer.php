@@ -1,6 +1,5 @@
 <?php
-// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/includes/footer.php]
-// includes/footer.php (ฉบับสมบูรณ์ V3.2 - เพิ่ม Workflow ค่าปรับ+คืน)
+// includes/footer.php
 
 // (ตรวจสอบค่า $current_page ถ้าไม่มี ให้เป็น 'index')
 $current_page = $current_page ?? 'index'; 
@@ -58,8 +57,9 @@ $user_role = $_SESSION['role'] ?? 'employee'; // (ดึง Role ปัจจุ
 </nav>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script src="assets/js/theme.js?v=<?php echo time(); ?>"></script>
 <script src="assets/js/admin_app.js?v=<?php echo time(); ?>"></script>

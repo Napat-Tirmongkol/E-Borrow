@@ -24,8 +24,8 @@
 
 /* 1. CSS Variables (ตัวแปรสี) */
 :root {
-    --color-primary: #0B6623; 
-    --color-primary-dark: #084C1A; 
+    --color-primary: #18B659; 
+    --color-primary-dark: #138F46; 
     
     /* (ข้อ 1) เปลี่ยนสีพื้นหลังเป็นเทาอ่อน */
     --color-page-bg: #f5f6fa; 
@@ -1720,4 +1720,253 @@ body.dark-mode .btn-primary {
     .table-container td:last-child {
         min-width: 140px; /* ให้มีพื้นที่พอสำหรับ 3-4 ปุ่ม */
     }
+}
+
+/* =========================================
+   [เพิ่มใหม่] CSS สำหรับ Popup พิมพ์บาร์โค้ด
+   ========================================= */
+
+/* กล่องเลือกอุปกรณ์ (ส่วนบน) */
+.swal-section-box {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border: 1px solid transparent; /* จองพื้นที่เส้นขอบไว้ */
+}
+
+/* กล่องรายการในตะกร้า (ส่วนล่าง) */
+.swal-cart-display {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+/* หัวตารางในตะกร้า */
+.cart-table-head {
+    background: #f0f0f0;
+}
+
+/* แถวในตาราง */
+.cart-table-row {
+    border-bottom: 1px solid #eee;
+}
+
+/* =========================================
+   DARK MODE OVERRIDES (สำหรับ Popup)
+   ========================================= */
+
+body.dark-mode .swal-section-box {
+    background-color: #374151; /* สีเทาเข้ม */
+    border: 1px solid #4b5563; /* เส้นขอบสีเทา */
+    color: var(--color-text-dark);
+}
+
+body.dark-mode .swal-cart-display {
+    border-color: #4b5563; /* เปลี่ยนสีขอบกล่องตะกร้า */
+    background-color: #1f2937; /* พื้นหลังในกล่องตะกร้า */
+}
+
+body.dark-mode .cart-table-head {
+    background-color: #4b5563; /* หัวตารางสีเข้ม */
+    color: #fff;
+}
+
+body.dark-mode .cart-table-row {
+    border-bottom: 1px solid #4b5563; /* เส้นขีดคั่นแถวสีเข้ม */
+    color: var(--color-text-dark);
+}
+
+/* ปรับสี Input จำนวนในตาราง */
+body.dark-mode .cart-table-row input[type="number"] {
+    background-color: #374151;
+    border: 1px solid #4b5563;
+    color: #fff;
+}
+
+/* ปรับสี Scrollbar ให้เข้าธีม (Optional) */
+body.dark-mode .swal-cart-display::-webkit-scrollbar-track {
+    background: #374151;
+}
+body.dark-mode .swal-cart-display::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+/* =========================================
+   [เพิ่ม] Fix: SweetAlert Printing Bug
+   ========================================= */
+
+@media print {
+    
+    /* 1. ซ่อนส่วนประกอบหลักทั้งหมดที่ไม่ต้องการพิมพ์ */
+    .header,
+    .footer-nav,
+    .header-row,
+    .filter-row,
+    .student-card-list,
+    .desktop-only .action-buttons {
+        display: none !important;
+    }
+
+    /* 2. บังคับให้ SweetAlert Container แสดงผลและยกเลิกตำแหน่งแบบลอยตัว */
+    .swal2-container.swal2-backdrop-show, 
+    .swal2-container {
+        position: static !important; /* ยกเลิก fixed/absolute positioning */
+        display: block !important;
+        background: none !important; /* ลบพื้นหลังสีดำทับจอ */
+        width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* 3. บังคับให้ Popup เป็นสีขาวเต็มหน้า และลบเงา/ขอบมน */
+    .swal2-popup {
+        display: block !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        /* บังคับให้เป็นสีขาว (เพื่อประหยัดหมึก) */
+        background: white !important; 
+        color: black !important;
+        transform: none !important; /* ยกเลิกการจัดตำแหน่ง 3D */
+    }
+    
+    /* 4. ซ่อนปุ่มใน Popup */
+    .swal2-actions, .swal2-close {
+        display: none !important;
+    }
+    
+    /* 5. จัดเนื้อหา Barcode ให้อยู่กลางและขยายพื้นที่ */
+    .swal2-html-container {
+        text-align: center !important;
+        padding: 0 !important;
+    }
+
+    /* 6. บังคับให้ส่วนแสดงบาร์โค้ดเป็นสีขาว */
+    #barcode-display-*, 
+    .swal2-html-container div[style*="background: white"] {
+         background: white !important;
+         padding: 10px !important;
+         box-shadow: none !important;
+    }
+
+    /* 7. บังคับให้บาร์โค้ดแสดงในสีดำ (เผื่อ Dark Mode) */
+    .swal2-html-container * {
+        color: black !important;
+    }
+}
+
+/* =========================================
+   [เพิ่มใหม่] ตกแต่ง Input File (ใน SweetAlert)
+   ========================================= */
+
+/* 1. ตัวกล่อง Input */
+.custom-file-input {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    font-size: 0.95rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fcfcfc;
+    color: #555;
+    transition: all 0.3s ease;
+    box-sizing: border-box; /* สำคัญ: ให้ Padding ไม่ดันความกว้าง */
+}
+
+/* เมื่อเอาเมาส์ไปชี้ หรือกดเลือก */
+.custom-file-input:hover,
+.custom-file-input:focus {
+    border-color: var(--color-primary); /* สีเขียวธีม */
+    background-color: #fff;
+    outline: none;
+}
+
+/* 2. ตกแต่งปุ่ม "Choose File" (เฉพาะ Webkit: Chrome, Edge, Safari) */
+.custom-file-input::file-selector-button {
+    margin-right: 12px;
+    border: none;
+    background: var(--color-primary); /* พื้นหลังปุ่มเป็นสีธีม */
+    padding: 8px 16px;
+    border-radius: 4px;
+    color: #fff; /* ตัวหนังสือสีขาว */
+    cursor: pointer;
+    font-family: 'RSU', sans-serif; /* ใช้ฟอนต์เดียวกับเว็บ */
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.custom-file-input::file-selector-button:hover {
+    background: #084d1a; /* สีเขียวเข้มขึ้นเมื่อชี้ */
+}
+
+/* 3. ข้อความแนะนำด้านล่าง */
+.file-help-text {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* =========================================
+   DARK MODE Support (สำหรับ Input File)
+   ========================================= */
+
+body.dark-mode .custom-file-input {
+    background-color: #2d3748; /* พื้นหลังมืด */
+    border-color: #4a5568;      /* ขอบสีเทาเข้ม */
+    color: #e2e8f0;            /* ตัวหนังสือสีขาวนวล */
+}
+
+body.dark-mode .custom-file-input:hover,
+body.dark-mode .custom-file-input:focus {
+    border-color: var(--color-primary);
+    background-color: #2d3748;
+}
+
+body.dark-mode .file-help-text {
+    color: #a0aec0; /* สีข้อความแนะนำในโหมดมืด */
+}
+
+/* ปรับสีปุ่มเลือกไฟล์ในโหมดมืด (ถ้าต้องการให้ต่างจากปกติ) */
+body.dark-mode .custom-file-input::file-selector-button {
+    background: var(--color-primary); 
+    color: #fff;
+}
+
+/* --- ปรับแต่ง Modal สำหรับโหมดมืด (Dark Mode) --- */
+
+/* เปลี่ยนสีพื้นหลังและตัวหนังสือของ Modal */
+body.dark-mode .modal-content {
+    background-color: #2D3748; /* สีเทาเข้ม (เหมือนสี Card) */
+    color: #E2E8F0;           /* สีตัวหนังสือขาวนวล */
+    border: 1px solid #4A5568; /* ขอบสีเทาอ่อน */
+}
+
+/* ปรับเส้นคั่น Header และ Footer ให้กลืนไปกับพื้นหลัง */
+body.dark-mode .modal-header,
+body.dark-mode .modal-footer {
+    border-color: #4A5568;
+}
+
+/* เปลี่ยนสีปุ่มกากบาท (Close) ให้เป็นสีขาว */
+body.dark-mode .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ปรับสีกล่องข้อความเหตุผล (ที่เป็นพื้นหลังสีเทาอ่อนในโหมดปกติ) */
+body.dark-mode #modalReasonText {
+    background-color: #1A202C !important; /* สีพื้นหลังเข้มขึ้น */
+    border-color: #4A5568 !important;
+    color: #CBD5E0;
+}
+
+/* ปรับสีหัวข้อใน Modal */
+body.dark-mode .modal-title {
+    color: #fff;
 }

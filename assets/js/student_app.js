@@ -139,11 +139,21 @@ function openRequestPopup(typeId, typeName) {
                                style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
                     </div>
                     
-                    <div style="margin-bottom: 15px;">
-                        <label for="swal_attachment" style="font-weight: bold; display: block; margin-bottom: 5px;">4. เอกสารแนบ (ถ้ามี):</label>
-                        <input type="file" name="attachment_file" id="swal_attachment" 
-                               style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
+                    <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label for="swal_attachment" style="font-weight: bold; display: block; margin-bottom: 8px;">
+            <i class="fas fa-paperclip"></i> แนบไฟล์เอกสาร (ถ้ามี):
+        </label>
+        
+        <input type="file" 
+               name="attachment" 
+               id="swal_attachment" 
+               class="custom-file-input" 
+               accept=".pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx">
+               
+        <div class="file-help-text">
+            <i class="fas fa-info-circle"></i> รองรับเฉพาะ PDF, Word, Excel, PowerPoint
+        </div>
+    </div>
                 </form>`;
 
             Swal.fire({

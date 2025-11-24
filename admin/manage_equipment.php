@@ -75,9 +75,14 @@ try {
 <div class="header-row">
     <h2><i class="fas fa-tools"></i> จัดการประเภทอุปกรณ์</h2>
     
-    <button class="add-btn" onclick="openAddTypePopup()">
-        <i class="fas fa-plus"></i> เพิ่มประเภทอุปกรณ์
-    </button>
+    <div style="display: flex; gap: 10px;">
+        <button class="add-btn" onclick="openBulkBarcodeForm()" style="background-color: var(--color-info);">
+            <i class="fas fa-barcode"></i> พิมพ์บาร์โค้ด
+        </button>
+        <button class="add-btn" onclick="openAddTypePopup()">
+            <i class="fas fa-plus"></i> เพิ่มประเภทอุปกรณ์
+        </button>
+    </div>
 </div>
 <?php else: // (สำหรับ Role อื่นที่ไม่ใช่ Admin หรือ Editor) ?>
 <div class="header-row" style="cursor: default;"> 
@@ -202,6 +207,11 @@ try {
 </div>
 
 
+<script>
+    // [ใหม่] Export ข้อมูลอุปกรณ์ที่ดึงมา ให้ JS สามารถใช้ได้
+    const equipmentTypesData = <?php echo json_encode($equipment_types); ?>;
+</script>
+
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // (ฟังก์ชัน Add ที่แก้ไขแล้ว)
@@ -309,7 +319,7 @@ try {
                 const type = data.equipment_type;
                 
                 let imagePreviewHtml = `
-                    <div class="equipment-card-image-placeholder" style="width: 100%; height: 150px; font-size: 3rem; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; color: #ccc; border-radius: 6px;">
+                    <div class="equipment-card-image-placeholder" style="width: 100%; height: 150px; font-size: 3rem; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; color: #cccccc; border-radius: 6px;">
                         <i class="fas fa-camera"></i>
                     </div>`;
                 if (type.image_url) {
@@ -319,7 +329,7 @@ try {
                              alt="รูปตัวอย่าง" 
                              style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 15px;"
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                        <div class="equipment-card-image-placeholder" style="display: none; width: 100%; height: 150px; font-size: 3rem; margin-bottom: 15px; justify-content: center; align-items: center; background-color: #f0f0f0; color: #ccc; border-radius: 6px;"><i class="fas fa-image"></i></div>`;
+                        <div class="equipment-card-image-placeholder" style="display: none; width: 100%; height: 150px; font-size: 3rem; margin-bottom: 15px; justify-content: center; align-items: center; background-color: #f0f0f0; color: #cccccc; border-radius: 6px;"><i class="fas fa-image"></i></div>`;
                 }
 
                 // 2. แสดง Popup
@@ -381,7 +391,9 @@ try {
             });
     }
 </script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <?php
 // 7. เรียกใช้ไฟล์ Footer
 // ◀️ (แก้ไข) เพิ่ม ../ ◀️

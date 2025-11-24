@@ -1,5 +1,5 @@
 <?php
-// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/process/request_borrow_process.php]
+// [แก้ไขไฟล์: process/request_borrow_process.php]
 
 // 1. "จ้างยาม" และ "เชื่อมต่อ DB"
 require_once('../includes/check_student_session_ajax.php'); 
@@ -24,44 +24,81 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    // ✅ (3) เพิ่ม: ส่วนจัดการไฟล์อัปโหลด
-    $attachment_url_to_db = null;
-    try {
-        if (isset($_FILES['attachment_file']) && $_FILES['attachment_file']['error'] == 0) {
-            
-            $upload_dir_server = '../uploads/attachments/'; // Path สำหรับ Server (PHP)
-            $upload_dir_db = 'uploads/attachments/';     // Path สำหรับ Database (HTML)
-            
-            if (!is_dir($upload_dir_server)) {
-                mkdir($upload_dir_server, 0755, true);
-            }
-            
-            // (ป้องกันชื่อไฟล์ภาษาไทย หรืออักขระแปลกๆ)
-            $original_filename = basename($_FILES['attachment_file']['name']);
-            $safe_filename = preg_replace('/[^A-Za-z0-9\._-]/', '', str_replace(' ', '_', $original_filename));
-            $new_filename = 'req-' . uniqid() . '-' . $safe_filename;
+    // ✅ (3) ส่วนจัดการไฟล์อัปโหลด (แก้ไขให้รองรับรูปภาพ + แก้การส่งค่ากลับแบบ JSON)
+    $attachment_url = NULL; // กำหนดค่าเริ่มต้นเป็น NULL
 
-            $target_file_server = $upload_dir_server . $new_filename;
-            $target_file_db = $upload_dir_db . $new_filename;
+    if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+        
+        $file_tmp = $_FILES['attachment']['tmp_name'];
+        $file_name = $_FILES['attachment']['name'];
+        $file_size = $_FILES['attachment']['size'];
+        
+        // 1. [แก้ไข] เพิ่มนามสกุลรูปภาพ (jpg, png)
+        $allowed_extensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
+        
+        // 2. [แก้ไข] เพิ่ม MIME Types ของรูปภาพ
+        $allowed_mimes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint', 
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'image/jpeg', // เพิ่ม
+            'image/png'   // เพิ่ม
+        ];
 
-            if (move_uploaded_file($_FILES['attachment_file']['tmp_name'], $target_file_server)) {
-                $attachment_url_to_db = $target_file_db;
-            } else {
-                throw new Exception("ไม่สามารถย้ายไฟล์ที่อัปโหลดได้");
-            }
+        // แยกนามสกุลไฟล์
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        // ตรวจสอบ 1: นามสกุล
+        if (!in_array($file_ext, $allowed_extensions)) {
+            echo json_encode(['status' => 'error', 'message' => 'อนุญาตเฉพาะไฟล์เอกสาร (PDF, Word) และรูปภาพ (JPG, PNG) เท่านั้น']);
+            exit;
         }
-    } catch (Exception $e) {
-        // (ถ้าอัปโหลดไฟล์ล้มเหลว ก็ไม่เป็นไร ให้ดำเนินการต่อโดยไม่มีไฟล์)
-        error_log("File upload failed: " . $e->getMessage());
+
+        // ตรวจสอบ 2: MIME Type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $file_tmp);
+        finfo_close($finfo);
+
+        if (!in_array($mime_type, $allowed_mimes)) {
+            echo json_encode(['status' => 'error', 'message' => 'ไฟล์ไม่ถูกต้อง หรืออาจเป็นไฟล์อันตราย']);
+            exit;
+        }
+
+        // ตรวจสอบ 3: ขนาดไฟล์ (5MB)
+        if ($file_size > 5 * 1024 * 1024) {
+            echo json_encode(['status' => 'error', 'message' => 'ไฟล์มีขนาดใหญ่เกินไป (ห้ามเกิน 5MB)']);
+            exit;
+        }
+
+        // 3. ตั้งชื่อไฟล์ใหม่
+        $new_filename = "req-" . uniqid() . "." . $file_ext;
+        $upload_dir = '../uploads/attachments/';
+        
+        // สร้างโฟลเดอร์ถ้ายังไม่มี
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+
+        $destination = $upload_dir . $new_filename;
+
+        if (move_uploaded_file($file_tmp, $destination)) {
+            // เก็บ Path ลงตัวแปร $attachment_url (ตัวแปรนี้แหละที่ต้องเอาไปใช้)
+            $attachment_url = 'uploads/attachments/' . $new_filename;
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์ (move_uploaded_file failed)']);
+            exit;
+        }
     }
-    // ✅ (จบส่วนจัดการไฟล์)
 
-
-    // 3. เริ่ม Transaction
+    // 4. เริ่ม Transaction
     try {
         $pdo->beginTransaction();
 
-        // 3.1 ค้นหา "ชิ้น" อุปกรณ์ (item) ที่ว่าง
+        // 4.1 ค้นหา "ชิ้น" อุปกรณ์
         $stmt_find = $pdo->prepare("SELECT id FROM med_equipment_items WHERE type_id = ? AND status = 'available' LIMIT 1 FOR UPDATE");
         $stmt_find->execute([$type_id]);
         $item_id = $stmt_find->fetchColumn();
@@ -70,11 +107,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("อุปกรณ์ประเภทนี้ถูกยืมไปหมดแล้วในขณะนี้");
         }
 
-        // 3.2 "จอง" อุปกรณ์ชิ้นนั้น (เปลี่ยนสถานะ item)
+        // 4.2 "จอง" อุปกรณ์
         $stmt_item = $pdo->prepare("UPDATE med_equipment_items SET status = 'borrowed' WHERE id = ?");
         $stmt_item->execute([$item_id]);
 
-        // 3.3 "ลด" จำนวนของว่างในประเภท (type)
+        // 4.3 "ลด" จำนวนของว่าง
         $stmt_type = $pdo->prepare("UPDATE med_equipment_types SET available_quantity = available_quantity - 1 WHERE id = ? AND available_quantity > 0");
         $stmt_type->execute([$type_id]);
         
@@ -82,24 +119,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
              throw new Exception("ไม่สามารถอัปเดตสต็อกอุปกรณ์ได้");
         }
 
-        // 3.4 "สร้าง" คำขอยืม (transaction)
-        // ✅ (4) แก้ไข SQL INSERT (ใช้คอลัมน์ใหม่ `attachment_url` ที่เราเพิ่มไปแล้ว)
+        // 4.4 "สร้าง" คำขอยืม
         $sql_trans = "INSERT INTO med_transactions 
                         (type_id, item_id, equipment_id, borrower_student_id, reason_for_borrowing, 
-                         attachment_url, -- (เพิ่มคอลัมน์นี้)
+                         attachment_url, 
                          lending_staff_id, due_date, 
                          status, approval_status, quantity) 
                       VALUES 
                         (?, ?, ?, ?, ?, 
-                         ?, -- (เพิ่ม ? นี้)
+                         ?, 
                          ?, ?, 
                          'borrowed', 'pending', 1)";
         
         $stmt_trans = $pdo->prepare($sql_trans);
-        // ✅ (5) แก้ไข execute
+        
+        // ✅ [แก้ไขจุดสำคัญ]: เปลี่ยนจาก $attachment_url_to_db เป็น $attachment_url
         $stmt_trans->execute([
             $type_id, $item_id, $item_id, $student_id, $reason, 
-            $attachment_url_to_db, // (เพิ่มตัวแปรนี้)
+            $attachment_url, // <-- แก้ตรงนี้ (เดิมใช้ตัวแปรผิด)
             $staff_id, $due_date
         ]);
 
@@ -117,7 +154,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $response['message'] = 'ต้องใช้วิธี POST เท่านั้น';
 }
 
-// 4. ส่งคำตอบ
+// ส่งคำตอบ
 echo json_encode($response);
 exit;
 ?>
