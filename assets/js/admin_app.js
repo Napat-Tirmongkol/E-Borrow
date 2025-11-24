@@ -711,89 +711,135 @@ function confirmDeleteType(typeId, typeName) {
     });
 }
 
-function openManageItemsPopup(typeId) {
+function openApproveSelectionModal(transId, currentItemId, equipName) {
+    // 1. แสดง Loading Popup ก่อน
     Swal.fire({
         title: 'กำลังโหลดรายการอุปกรณ์...',
-        didOpen: () => { Swal.showLoading(); }
+        text: 'กรุณารอสักครู่',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
     });
 
-    fetch(`ajax/get_items_for_type.php?type_id=${typeId}`)
+    // 2. โหลดรายการ Serial Number ที่ "ว่าง" หรือ "ถูกจองโดยคำขอนี้" จาก AJAX
+    // (ใช้ currentItemId เพื่อให้มั่นใจว่าของที่ระบบจองไว้เดิมแสดงในรายการเสมอ)
+    fetch(`ajax/get_items_for_approve.php?transaction_id=${transId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.status !== 'success') throw new Error(data.message);
+            if (data.status !== 'success') {
+                throw new Error(data.message || 'ไม่สามารถโหลดรายการอุปกรณ์ได้');
+            }
 
-            const type = data.type;
-            const items = data.items;
+            let selectOptions = '';
+            let defaultId = currentItemId || (data.items.length > 0 ? data.items[0].id : '');
+            
+            data.items.forEach(item => {
+                let label = item.serial_number ? `${item.serial_number} (ID: ${item.id})` : `ID: ${item.id} (ไม่มี Serial)`;
+                let isSelected = (item.id == defaultId) ? 'selected' : '';
+                selectOptions += `<option value="${item.id}" ${isSelected}>${label}</option>`;
+            });
 
-            let tableRows = '';
-            if (items.length === 0) {
-                tableRows = `<tr><td colspan="5" style="text-align: center;">ยังไม่มีอุปกรณ์รายชิ้นในประเภทนี้</td></tr>`;
-            } else {
-                items.forEach(item => {
-                    let statusBadge = '';
-                    if (item.status === 'available') {
-                        statusBadge = `<span class="status-badge available">Available</span>`;
-                    } else if (item.status === 'borrowed') {
-                        statusBadge = `<span class="status-badge borrowed">Borrowed</span>`;
-                    } else {
-                        statusBadge = `<span class="status-badge maintenance">Maintenance</span>`;
+            if (selectOptions === '') {
+                 throw new Error('ไม่พบอุปกรณ์ที่พร้อมสำหรับประเภทนี้');
+            }
+
+            // 3. ปิด Loading และเปิด Modal เลือกอุปกรณ์ด้วย SweetAlert2
+            Swal.close(); 
+            
+            Swal.fire({
+                title: `เลือกอุปกรณ์สำหรับ: ${equipName}`,
+                html: `
+                    <form id="approveSelectForm" action="process/approve_request_process.php" method="POST" style="text-align: left;">
+                        <input type="hidden" name="transaction_id" value="${transId}">
+                        <input type="hidden" name="original_item_id" value="${currentItemId}">
+                        
+                        <div class="swal-info-box" style="margin-bottom: 15px;">
+                            <p style="margin: 0;">อุปกรณ์ที่ขอ: <strong>${equipName}</strong></p>
+                            <p style="margin: 0;">(ชิ้นที่ระบบจองไว้เดิม: ${currentItemId || 'N/A'})</p>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="approve_item_select" style="font-weight: bold; display: block; margin-bottom: 5px;">หมายเลขเครื่อง (Serial Number):</label>
+                            <select class="form-select swal2-select" name="selected_item_id" id="approve_item_select" required style="width: 100%; margin: 0;">
+                                ${selectOptions}
+                            </select>
+                            <small class="text-muted">*สามารถเลือกชิ้นอื่นที่ว่างอยู่ได้</small>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <label for="scan_barcode_input" style="font-weight: bold; display: block; margin-bottom: 5px;">สแกนบาร์โค้ด (ถ้ามี):</label>
+                            <input type="text" class="form-control swal2-input" id="scan_barcode_input" placeholder="ยิงบาร์โค้ด Item ID หรือ Serial..." autocomplete="off" style="margin: 0;">
+                            <small class="text-muted">*รหัสที่สแกนจะถูกเลือกใน Dropdown ด้านบน</small>
+                        </div>
+                    </form>`,
+                width: '500px',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-check-circle"></i> ยืนยันอนุมัติ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: 'var(--color-success)',
+               preConfirm: () => {
+                    const selectedId = document.getElementById('approve_item_select').value;
+                    if (!selectedId) {
+                         Swal.showValidationMessage('กรุณาเลือกอุปกรณ์');
+                         return false;
                     }
-
-                    let actionButtons = '';
-                    if (item.status !== 'borrowed') {
-                        actionButtons = `
-                            <button class="btn btn-manage btn-sm" onclick="openEditItemPopup(${item.id})"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(${item.id}, ${item.type_id})"><i class="fas fa-trash"></i></button>
-                        `;
-                    } else {
-                        actionButtons = `<span class="text-muted" style="font-size: 0.9em;">ถูกยืมอยู่</span>`;
+                    
+                    const form = document.getElementById('approveSelectForm');
+                    
+                    // ✅ แก้ไข: คาดหวัง JSON response
+                    return fetch(form.action, { method: 'POST', body: new FormData(form) })
+                        .then(response => response.json()) // <--- เปลี่ยนเป็น .json()
+                        .then(data => {
+                            if (data.status !== 'success') {
+                                // ถ้าสถานะไม่ใช่ success ให้ถือเป็น Error และแสดงข้อความจาก PHP
+                                throw new Error(data.message);
+                            }
+                            return data; // ส่งต่อข้อมูลสำเร็จ
+                        })
+                        .catch(error => {
+                            // แสดง Error จาก PHP
+                            Swal.showValidationMessage(`เกิดข้อผิดพลาด: ${error.message}`);
+                            return false; // สำคัญ: ต้อง return false เพื่อป้องกัน Modal ปิด
+                        });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // result.value คือ object { status: 'success', message: '...' } จาก PHP
+                    Swal.fire('อนุมัติสำเร็จ!', result.value.message, 'success')
+                    // ✅ เพิ่ม .then() เพื่อสั่งรีโหลดหน้าจอเมื่อ Pop-up ปิด
+                    .then(() => location.reload()); 
+                }
+            });
+            
+            // 4. เพิ่ม Logic สำหรับการสแกน Barcode (หลังเปิด Modal)
+            const scanInput = document.getElementById('scan_barcode_input');
+            if (scanInput) {
+                scanInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // รหัสที่สแกนอาจเป็น EQ-ID หรือ ID ธรรมดา
+                        const barcodeValue = this.value.trim().replace('EQ-', '');
+                        const select = document.getElementById('approve_item_select');
+                        let found = false;
+                        for (let i = 0; i < select.options.length; i++) {
+                            // เช็คจาก value (ซึ่งเป็น Item ID)
+                            if (select.options[i].value == barcodeValue) {
+                                select.selectedIndex = i; // เลือก Option นั้น
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            Swal.showValidationMessage(`เลือก Serial: ${select.options[select.selectedIndex].text}`);
+                            this.value = '';
+                            document.querySelector('.swal2-confirm').focus(); // โฟกัสปุ่มยืนยัน
+                        } else {
+                            Swal.showValidationMessage('ไม่พบหมายเลขเครื่องนี้ในรายการที่เลือกได้');
+                            this.value = '';
+                        }
                     }
-
-                    tableRows += `
-                        <tr>
-                            <td>${item.id}</td>
-                            <td>${item.name}</td>
-                            <td>${item.serial_number || '-'}</td>
-                            <td>${statusBadge}</td>
-                            <td class="action-buttons" style="gap: 0.25rem;">${actionButtons}</td>
-                        </tr>
-                    `;
                 });
             }
 
-            const popupHtml = `
-                <div style="text-align: left; max-height: 60vh; overflow-y: auto; margin-top: 1rem;">
-                    <table class="section-card" style="width: 100%;">
-                        <thead>
-                            <tr>
-                                <th style="width: 60px;">ID</th>
-                                <th>ชื่อ/รุ่น</th>
-                                <th>ซีเรียล</th>
-                                <th style="width: 120px;">สถานะ</th>
-                                <th style="width: 100px;">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            Swal.fire({
-                title: `รายการอุปกรณ์: ${type.name}`,
-                html: popupHtml,
-                width: '800px',
-                showConfirmButton: true,
-                confirmButtonText: `<i class="fas fa-plus"></i> เพิ่มอุปกรณ์ชิ้นใหม่`,
-                confirmButtonColor: 'var(--color-success)',
-                showCancelButton: true,
-                cancelButtonText: 'ปิดหน้าต่าง',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    openAddItemPopup(typeId, type.name);
-                }
-            });
         })
         .catch(error => {
             Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');

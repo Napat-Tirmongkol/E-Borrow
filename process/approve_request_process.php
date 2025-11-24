@@ -1,66 +1,96 @@
 <?php
-// process/approve_request_process.php
+// process/approve_request_process.php (ฉบับแก้ไข: รองรับ AJAX/JSON และ approver_id)
 include('../includes/check_session.php');
 require_once('../includes/db_connect.php');
 require_once('../includes/log_function.php');
 
+// ตั้งค่าให้ตอบกลับเป็น JSON
+header('Content-Type: application/json');
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
+
+// ตรวจสอบว่าเป็น POST และมีค่า transaction_id ส่งมา
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['transaction_id'])) {
     
     $transaction_id = $_POST['transaction_id'];
-    $original_item_id = $_POST['original_item_id']; // ตัวที่ระบบจองให้ตอนแรก
-    $selected_item_id = $_POST['selected_item_id']; // ตัวที่ Admin เลือกจริง (อาจเป็นตัวเดิมหรือตัวใหม่)
-    $admin_id = $_SESSION['user_id'];
+    $selected_item_id = $_POST['selected_item_id']; // ไอเท็มที่ Admin เลือกจาก Dropdown
+    
+    // ดึง ID ของคนอนุมัติ
+    $admin_id = $_SESSION['user_id'] ?? $_SESSION['id'] ?? 0;
+
+    if (empty($selected_item_id)) {
+        $response['message'] = "กรุณาเลือกอุปกรณ์ (Serial Number)";
+        echo json_encode($response);
+        exit;
+    }
 
     try {
         $pdo->beginTransaction();
 
-        // 1. ตรวจสอบว่ามีการเปลี่ยนชิ้นอุปกรณ์หรือไม่
-        if ($original_item_id != $selected_item_id) {
+        // 1. ดึงข้อมูลเดิมจาก Database โดยตรง
+        $stmt_chk = $pdo->prepare("SELECT item_id FROM med_transactions WHERE id = ?");
+        $stmt_chk->execute([$transaction_id]);
+        $current_item_id = $stmt_chk->fetchColumn(); 
+
+        // 2. เปรียบเทียบของที่เลือกใหม่ (Selected) กับของเดิม (Current)
+        if ($selected_item_id != $current_item_id) {
             
-            // 1.1 คืนสภาพตัวเดิมให้เป็น 'available' (ถ้าตัวเดิมไม่ใช่ 0 หรือค่าว่าง)
-            if (!empty($original_item_id)) {
+            // === กรณีมีการเปลี่ยนชิ้นอุปกรณ์ ===
+            
+            // 2.1 ปล่อยของเดิมให้ว่าง (ถ้ามีค่า)
+            if (!empty($current_item_id)) {
                 $stmt_release = $pdo->prepare("UPDATE med_equipment_items SET status = 'available' WHERE id = ?");
-                $stmt_release->execute([$original_item_id]);
+                $stmt_release->execute([$current_item_id]);
             }
 
-            // 1.2 ปรับสถานะตัวใหม่เป็น 'borrowed'
-            // ตรวจสอบก่อนว่าตัวใหม่ว่างจริงไหม (กันพลาด)
-            $stmt_check = $pdo->prepare("SELECT status FROM med_equipment_items WHERE id = ?");
-            $stmt_check->execute([$selected_item_id]);
-            $new_item_status = $stmt_check->fetchColumn();
+            // 2.2 เช็คของชิ้นใหม่ว่าว่างจริงไหม
+            $stmt_status = $pdo->prepare("SELECT status FROM med_equipment_items WHERE id = ?");
+            $stmt_status->execute([$selected_item_id]);
+            $new_item_status = $stmt_status->fetchColumn();
 
-            if ($new_item_status != 'available') {
-                throw new Exception("อุปกรณ์ที่เลือก (ID: $selected_item_id) ไม่ว่างในขณะนี้");
+            if ($new_item_status !== 'available') {
+                // ถ้าสถานะไม่ใช่ available แสดงว่าถูกคนอื่นแย่งไปแล้ว
+                throw new Exception("อุปกรณ์ชิ้นที่เลือก (ID: $selected_item_id) ไม่ว่าง (สถานะ: $new_item_status)");
             }
 
+            // 2.3 จองของชิ้นใหม่
             $stmt_borrow = $pdo->prepare("UPDATE med_equipment_items SET status = 'borrowed' WHERE id = ?");
             $stmt_borrow->execute([$selected_item_id]);
-        }
+
+        } 
         
-        // 2. อัปเดตข้อมูลใน Transaction (เปลี่ยนสถานะเป็น approved และอัปเดต item_id เป็นตัวที่เลือก)
+        // 3. อัปเดตสถานะคำขอเป็น 'approved' และบันทึกข้อมูลผู้อนุมัติ (approver_id)
         $sql = "UPDATE med_transactions 
                 SET approval_status = 'approved', 
-                    approver_id = ?, 
-                    item_id = ?,      -- อัปเดต Item ID จริง
-                    equipment_id = ?  -- อัปเดต Equipment ID (FK) ให้ตรงกัน
+                    approver_id = ?,    -- ✅ คอลัมน์ที่เพิ่มในขั้นตอนที่ 1
+                    item_id = ?,      
+                    equipment_id = ?  
                 WHERE id = ?";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$admin_id, $selected_item_id, $selected_item_id, $transaction_id]);
 
         $pdo->commit();
-        writeLog($pdo, $admin_id, "Approve request ID: $transaction_id (Item: $selected_item_id)", "approve");
+        
+        // บันทึก Log 
+        if(function_exists('log_action')){
+            $admin_user_name = $_SESSION['full_name'] ?? 'System';
+            $log_desc = "Admin '{$admin_user_name}' (ID: {$admin_id}) ได้อนุมัติคำขอ (TID: {$transaction_id}) สำหรับอุปกรณ์ (Item ID: {$selected_item_id})";
+            log_action($pdo, $admin_id, 'approve_request', $log_desc);
+        }
 
-        $_SESSION['success'] = "อนุมัติคำขอเรียบร้อยแล้ว (มอบอุปกรณ์ ID: $selected_item_id)";
+        // ✅ ส่ง JSON ตอบกลับเมื่อสำเร็จ
+        $response['status'] = 'success';
+        $response['message'] = "อนุมัติเรียบร้อยแล้ว (มอบอุปกรณ์ ID: $selected_item_id)";
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        $_SESSION['error'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
+        $response['message'] = "เกิดข้อผิดพลาด: " . $e->getMessage();
     }
 } else {
-    $_SESSION['error'] = "ข้อมูลไม่ครบถ้วน";
+    $response['message'] = "ข้อมูลไม่ครบถ้วน";
 }
 
-header("Location: ../admin/index.php");
+// 4. ส่งคำตอบ JSON กลับไปเสมอ
+echo json_encode($response);
 exit();
 ?>

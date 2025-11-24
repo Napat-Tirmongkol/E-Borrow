@@ -119,30 +119,18 @@ include('../includes/header.php');
 <?php endif; ?>
 
 <div class="header-row">
-<<<<<<< HEAD
     <h2><i class="fas fa-tachometer-alt"></i> ภาพรวมระบบ</h2>
     <a href="admin/walkin_borrow.php" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.7rem 1.2rem;">
         <i class="fas fa-qrcode"></i> สแกนยืม
     </a>
 </div>
-=======
-        <h2><i class="fas fa-tachometer-alt"></i> ภาพรวมระบบ</h2>
-        
-        <a href="admin/walkin_borrow.php" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.7rem 1.2rem;">
-            <i class="fas fa-qrcode"></i> สแกนยืม
-        </a>
-    </div>
->>>>>>> ef5cd04f7b526bd3851d14aa002e832d920fab40
 
-<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') : ?>
 <div class="section-card" style="margin-bottom: 1.5rem;">
     <h2 class="section-title">สถานะอุปกรณ์ทั้งหมด</h2>
     <div style="width: 100%; max-width: 400px; margin: 0 auto;">
         <canvas id="equipmentStatusChart"></canvas>
     </div>
 </div>
-<?php endif; ?>
-
 <div class="dashboard-grid">
 
     <div class="container">
@@ -314,83 +302,10 @@ include('../includes/header.php');
     </div>
 </div>
 
-<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="detailModalLabel"><i class="fas fa-info-circle"></i> รายละเอียดการยืม</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>ชื่อของที่ยืม:</strong> <span id="modalItemName" class="text-primary">-</span></p>
-                <p><strong>Serial Number:</strong> <span id="modalSerialNumber">-</span></p>
-                <p><strong>ผู้ขอ:</strong> <span id="modalRequester">-</span></p>
-                <p><strong>วันที่ยืม:</strong> <span id="modalBorrowDate">-</span></p>
-                <p><strong>กำหนดคืน:</strong> <span id="modalDueDate" class="text-danger">-</span></p>
-                <hr>
-                <p><strong>เหตุผลการยืม:</strong></p>
-                <div class="p-2 bg-light border rounded" id="modalReasonText" style="min-height: 50px;">-</div>
-                <div id="modalAttachmentSection" class="mt-3" style="display: none; border-top: 1px solid #dee2e6; padding-top: 10px;">
-                    <strong><i class="fas fa-paperclip"></i> เอกสารแนบ:</strong>
-                    <br>
-                    <a href="#" id="modalAttachmentLink" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                        <i class="fas fa-external-link-alt"></i> เปิดดูไฟล์แนบ
-                    </a>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="approveSelectModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="approveSelectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="approveSelectModalLabel"><i class="fas fa-hand-holding"></i> เลือกอุปกรณ์ที่จะมอบให้</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="approveSelectForm" action="process/approve_request_process.php" method="POST">
-                    <input type="hidden" name="transaction_id" id="approve_transaction_id">
-                    <input type="hidden" name="original_item_id" id="approve_original_item_id">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">อุปกรณ์ที่ขอ:</label>
-                        <input type="text" class="form-control" id="approve_equipment_name" readonly>
-                    </div>
-
-                    <hr>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-primary"><i class="fas fa-barcode"></i> สแกนบาร์โค้ด (ถ้ามี):</label>
-                        <input type="text" class="form-control" id="scan_barcode_input" placeholder="คลิกที่นี่แล้วยิงบาร์โค้ด..." autocomplete="off">
-                        <small class="text-muted">*ระบบจะเลือก Serial Number ให้อัตโนมัติเมื่อยิงบาร์โค้ด</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">เลือกหมายเลขเครื่อง (Serial Number):</label>
-                        <select class="form-select" name="selected_item_id" id="approve_item_select" required>
-                            <option value="">กำลังโหลดรายการ...</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-success" onclick="submitApproveForm()">
-                    <i class="fas fa-check-circle"></i> ยืนยันอนุมัติ
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-// ฟังก์ชันเปิด Modal รายละเอียด (แก้ไข Aria-hidden)
+// ฟังก์ชันเปิด Modal รายละเอียด (ใช้ใน Admin App JS)
 function openDetailModal(element) {
+    // ... (โค้ดสำหรับดึง data-* attribute) ...
     const item = element.getAttribute('data-item');
     const serial = element.getAttribute('data-serial');
     const requester = element.getAttribute('data-requester');
@@ -399,103 +314,39 @@ function openDetailModal(element) {
     const reason = element.getAttribute('data-reason');
     const attachment = element.getAttribute('data-attachment');
 
-    document.getElementById('modalItemName').innerText = item;
-    document.getElementById('modalSerialNumber').innerText = (serial && serial !== '') ? serial : '-';
-    document.getElementById('modalRequester').innerText = requester;
-    document.getElementById('modalBorrowDate').innerText = borrowDate;
-    document.getElementById('modalDueDate').innerText = dueDate;
-    document.getElementById('modalReasonText').innerText = reason;
-
-    const attachSection = document.getElementById('modalAttachmentSection');
-    const attachLink = document.getElementById('modalAttachmentLink');
-
-    if (attachment && attachment.trim() !== "") {
-        attachSection.style.display = 'block'; 
-        attachLink.href = attachment;          
-    } else {
-        attachSection.style.display = 'none';  
-        attachLink.href = '#';
-    }
-
-    const modalEl = document.getElementById('detailModal');
-    // ลบ aria-hidden ออกก่อนเปิดเพื่อป้องกัน Error
-    modalEl.removeAttribute('aria-hidden');
-    
-    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    myModal.show();
-}
-
-// ฟังก์ชันเปิด Modal อนุมัติ (เลือกของ)
-function openApproveSelectionModal(transId, currentItemId, equipName) {
-    document.getElementById('approve_transaction_id').value = transId;
-    document.getElementById('approve_original_item_id').value = currentItemId;
-    document.getElementById('approve_equipment_name').value = equipName;
-    document.getElementById('scan_barcode_input').value = ''; 
-    
-    const selectBox = document.getElementById('approve_item_select');
-    selectBox.innerHTML = '<option value="">กำลังโหลด...</option>';
-
-    fetch('ajax/get_items_for_approve.php?transaction_id=' + transId)
-        .then(response => response.json())
-        .then(data => {
-            selectBox.innerHTML = ''; 
-            if (data.status === 'success') {
-                data.items.forEach(item => {
-                    let isSelected = (item.id == currentItemId) ? 'selected' : '';
-                    let label = item.serial_number ? `${item.serial_number} (ID: ${item.id})` : `ID: ${item.id} (ไม่มี Serial)`;
-                    let option = `<option value="${item.id}" data-barcode="${item.id}" ${isSelected}>${label}</option>`;
-                    selectBox.innerHTML += option;
-                });
-            } else {
-                selectBox.innerHTML = '<option value="">ไม่พบอุปกรณ์</option>';
-            }
-        });
-
-    const modalEl = document.getElementById('approveSelectModal');
-    modalEl.removeAttribute('aria-hidden'); // ป้องกัน Error แบบเดียวกัน
-    const myModal = new bootstrap.Modal(modalEl);
-    myModal.show();
-    
-    modalEl.addEventListener('shown.bs.modal', function () {
-        document.getElementById('scan_barcode_input').focus();
+    // ... (โค้ดสำหรับแสดง SweetAlert2 Detail Modal) ...
+    Swal.fire({
+        title: 'รายละเอียดการยืม',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <p><strong>ชื่อของที่ยืม:</strong> <span id="modalItemName" class="text-primary">${item}</span></p>
+                <p><strong>Serial Number:</strong> <span id="modalSerialNumber">${(serial && serial !== '-') ? serial : '-'}</span></p>
+                <p><strong>ผู้ขอ:</strong> <span id="modalRequester">${requester}</span></p>
+                <p><strong>วันที่ยืม:</strong> <span id="modalBorrowDate">${borrowDate}</span></p>
+                <p><strong>กำหนดคืน:</strong> <span id="modalDueDate" style="color: var(--color-danger);">${dueDate}</span></p>
+                <hr>
+                <p><strong>เหตุผลการยืม:</strong></p>
+                <div class="p-2 bg-light border rounded" id="modalReasonText" style="min-height: 50px; white-space: pre-wrap; background-color: var(--color-page-bg);">${reason}</div>
+                
+                ${(attachment && attachment.trim() !== '') ? `
+                    <div class="mt-3" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
+                        <strong><i class="fas fa-paperclip"></i> เอกสารแนบ:</strong><br>
+                        <a href="${attachment}" target="_blank" class="btn btn-sm btn-info mt-2">
+                            <i class="fas fa-external-link-alt"></i> เปิดดูไฟล์แนบ
+                        </a>
+                    </div>
+                ` : ''}
+            </div>
+        `,
+        confirmButtonText: 'ปิด',
+        width: '600px'
     });
 }
 
-document.getElementById('scan_barcode_input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const barcode = this.value.trim();
-        const selectBox = document.getElementById('approve_item_select');
-        let found = false;
-        for (let i = 0; i < selectBox.options.length; i++) {
-            if (selectBox.options[i].value == barcode) {
-                selectBox.selectedIndex = i;
-                found = true;
-                break;
-            }
-        }
-        if(found){
-             this.value = '';
-             submitApproveForm(); 
-        } else {
-             alert('ไม่พบอุปกรณ์หมายเลขนี้ในรายการ');
-             this.value = '';
-        }
-    }
-});
 
-function submitApproveForm() {
-    document.getElementById('approveSelectForm').submit();
-}
-
-// Listener รวมสำหรับ Modal ทุกตัวเพื่อจัดการ aria-hidden
-document.addEventListener('show.bs.modal', event => {
-    event.target.removeAttribute('aria-hidden');
-});
-document.addEventListener('shown.bs.modal', event => {
-    const closeBtn = event.target.querySelector('.btn-close');
-    if(closeBtn) closeBtn.focus();
-});
+// ⛔ ลบโค้ด JavaScript ที่เหลือทั้งหมดออก (รวมถึง Modal Listeners และ Chart DOMContentLoaded)
+// เพราะฟังก์ชันเหล่านี้จะถูกเรียกใช้จาก assets/js/admin_app.js และ assets/js/admin_app.js
+// ส่วน Chart.js จะทำงานอัตโนมัติเมื่อ DOMContentLoaded
 
 document.addEventListener("DOMContentLoaded", function() {
     const ctx = document.getElementById('equipmentStatusChart').getContext('2d');

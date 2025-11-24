@@ -24,7 +24,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-<<<<<<< HEAD
     // ✅ (3) ส่วนจัดการไฟล์อัปโหลด (แก้ไขให้รองรับรูปภาพ + แก้การส่งค่ากลับแบบ JSON)
     $attachment_url = NULL; // กำหนดค่าเริ่มต้นเป็น NULL
 
@@ -94,82 +93,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit;
         }
     }
-=======
-    // ✅ (3) เพิ่ม: ส่วนจัดการไฟล์อัปโหลด
-$attachment_url = NULL;
-
-if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-    
-    $file_tmp = $_FILES['attachment']['tmp_name'];
-    $file_name = $_FILES['attachment']['name'];
-    $file_size = $_FILES['attachment']['size'];
-    
-    // 1. กำหนดนามสกุลที่อนุญาต (Whitelist) - ห้าม .php, .exe เด็ดขาด
-    $allowed_extensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
-    
-    // 2. กำหนด MIME Types ที่อนุญาต (ตรวจสอบไส้ในไฟล์)
-    $allowed_mimes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint', 
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-    ];
-
-    // แยกนามสกุลไฟล์
-    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-
-    // ตรวจสอบ 1: นามสกุลต้องตรงกับที่อนุญาต
-    if (!in_array($file_ext, $allowed_extensions)) {
-        $_SESSION['error'] = "อนุญาตเฉพาะไฟล์เอกสาร (PDF, Word, Excel) เท่านั้น";
-        header("Location: ../borrow.php"); 
-        exit;
-    }
-
-    // ตรวจสอบ 2: ตรวจ MIME Type จริงของไฟล์ (กันการปลอมนามสกุล)
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime_type = finfo_file($finfo, $file_tmp);
-    finfo_close($finfo);
-
-    if (!in_array($mime_type, $allowed_mimes)) {
-        $_SESSION['error'] = "ไฟล์ไม่ถูกต้อง หรืออาจเป็นไฟล์อันตราย";
-        header("Location: ../borrow.php");
-        exit;
-    }
-
-    // ตรวจสอบ 3: ขนาดไฟล์ (เช่น ไม่เกิน 5MB)
-    if ($file_size > 5 * 1024 * 1024) {
-        $_SESSION['error'] = "ไฟล์มีขนาดใหญ่เกินไป (ห้ามเกิน 5MB)";
-        header("Location: ../borrow.php");
-        exit;
-    }
-
-    // 3. ตั้งชื่อไฟล์ใหม่ (Random Name) เพื่อป้องกันไฟล์ทับกันและป้องกันชื่อไฟล์อันตราย
-    // เช่น เปลี่ยน "hack.php.pdf" เป็น "req-65123ab123.pdf"
-    $new_filename = "doc-" . uniqid() . "." . $file_ext;
-    $upload_dir = '../uploads/attachments/';
-    
-    // สร้างโฟลเดอร์ถ้ายังไม่มี
-    if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
-        // สร้างไฟล์ .htaccess เพื่อป้องกันการรันสคริปต์ในโฟลเดอร์นี้ (ความปลอดภัยสูงสุด)
-        file_put_contents($upload_dir . '.htaccess', "Order Deny,Allow\nDeny from all\n<FilesMatch '\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$'>\nAllow from all\n</FilesMatch>");
-    }
-
-    $destination = $upload_dir . $new_filename;
-
-    if (move_uploaded_file($file_tmp, $destination)) {
-        // เก็บ Path ลงฐานข้อมูล (ตัด ../ ออก)
-        $attachment_url = 'uploads/attachments/' . $new_filename;
-    } else {
-        $_SESSION['error'] = "เกิดข้อผิดพลาดในการอัปโหลดไฟล์";
-        header("Location: ../borrow.php");
-        exit;
-    }
-}
->>>>>>> ef5cd04f7b526bd3851d14aa002e832d920fab40
 
     // 4. เริ่ม Transaction
     try {
