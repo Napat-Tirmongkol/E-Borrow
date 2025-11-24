@@ -1937,6 +1937,7 @@ body.dark-mode .file-help-text {
 body.dark-mode .custom-file-input::file-selector-button {
     background: var(--color-primary); 
     color: #fff;
+<<<<<<< HEAD
 }
 
 /* --- ปรับแต่ง Modal สำหรับโหมดมืด (Dark Mode) --- */
@@ -1969,4 +1970,6 @@ body.dark-mode #modalReasonText {
 /* ปรับสีหัวข้อใน Modal */
 body.dark-mode .modal-title {
     color: #fff;
+=======
+>>>>>>> ef5cd04f7b526bd3851d14aa002e832d920fab40
 }

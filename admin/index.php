@@ -119,11 +119,20 @@ include('../includes/header.php');
 <?php endif; ?>
 
 <div class="header-row">
+<<<<<<< HEAD
     <h2><i class="fas fa-tachometer-alt"></i> ภาพรวมระบบ</h2>
     <a href="admin/walkin_borrow.php" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.7rem 1.2rem;">
         <i class="fas fa-qrcode"></i> สแกนยืม
     </a>
 </div>
+=======
+        <h2><i class="fas fa-tachometer-alt"></i> ภาพรวมระบบ</h2>
+        
+        <a href="admin/walkin_borrow.php" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.7rem 1.2rem;">
+            <i class="fas fa-qrcode"></i> สแกนยืม
+        </a>
+    </div>
+>>>>>>> ef5cd04f7b526bd3851d14aa002e832d920fab40
 
 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') : ?>
 <div class="section-card" style="margin-bottom: 1.5rem;">
