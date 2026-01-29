@@ -283,52 +283,41 @@ include('../includes/header.php');
 
     // --- 2. ระบบสแกน ---
 
-    function onScanSuccess(decodedText, decodedResult) {
-        if (scanLock) { 
-            return; // 🛑 ถ้ายังล็อกอยู่ ให้หยุดทันที
-        }
-        
-        // 1. ตั้งล็อกชั่วคราว
-        scanLock = true;
-        setTimeout(() => { 
-            scanLock = false; 
-        }, 500); // ปลดล็อกใน 0.5 วินาที (ป้องกันการสแกนรัวๆ จากเฟรมถัดไป)
+  function onScanSuccess(decodedText, decodedResult) {
+    if (scanLock) return;
+    scanLock = true;
+    setTimeout(() => { scanLock = false; }, 500);
 
-        console.log("Scan result:", decodedText);
-
-        if (decodedText.startsWith("MEDLOAN_STUDENT:")) {
-            const studentCode = decodedText.split(":")[1];
-            fetchStudent(studentCode);
-        } else if (decodedText.startsWith("EQ-")) {
-            const itemId = decodedText.replace("EQ-", "");
-            fetchItem(itemId);
-        } else {
-            Swal.fire('ไม่รู้จักรหัส', 'รหัสนี้ไม่ใช่ของระบบ MedLoan (' + decodedText + ')', 'warning');
-        }
+    if (decodedText.startsWith("MEDLOAN_STUDENT:")) {
+        const parts = decodedText.split(":");
+        let studentCode = parts[1];
+        let dbId = parts[2] || ''; 
+        fetchStudent(studentCode, dbId); // ส่ง DB ID ไปด้วย
+    } else if (decodedText.startsWith("EQ-")) {
+        const itemId = decodedText.replace("EQ-", "");
+        fetchItem(itemId);
+    } else {
+        Swal.fire('ไม่รู้จักรหัส', 'รหัสนี้ไม่ใช่ของระบบ MedLoan', 'warning');
     }
+}
 
-    function fetchStudent(code) {
-        if (document.getElementById('input_student_id').value) return; // ไม่โหลดซ้ำ
-        
-        // ✅ แก้ไข Path แล้ว
-        fetch(`/e_Borrow_test/ajax/get_student_by_code.php?id=${code}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const s = data.student;
-                    document.getElementById('input_student_id').value = s.id;
-                    document.getElementById('student-display').innerHTML = `
-                        <strong style="color: var(--color-primary);">${s.full_name}</strong><br>
-                        <small>รหัส: ${s.student_personnel_id}</small>
-                    `;
-                    document.getElementById('student-info-box').style.borderLeftColor = 'var(--color-success)';
-                    Swal.fire({icon: 'success', title: 'ระบุตัวตนสำเร็จ', text: s.full_name, timer: 1000, showConfirmButton: false});
-                    checkFormReady();
-                } else {
-                    Swal.fire('ไม่พบข้อมูล', 'ไม่พบนักศึกษารหัสนี้', 'error');
-                }
-            });
-    }
+   function fetchStudent(code, dbId = '') {
+    if (document.getElementById('input_student_id').value) return; 
+   fetch(`/e_Borrow_test/ajax/get_student_by_code.php?id=${code}&db_id=${dbId}`) // ส่ง db_id ไป URL
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const s = data.student;
+                document.getElementById('input_student_id').value = s.id;
+                document.getElementById('student-display').innerHTML = `<strong style="color: var(--color-primary);">${s.full_name}</strong><br><small>รหัส: ${s.student_personnel_id}</small>`;
+                document.getElementById('student-info-box').style.borderLeftColor = 'var(--color-success)';
+                Swal.fire({icon: 'success', title: 'ระบุตัวตนสำเร็จ', text: s.full_name, timer: 1000, showConfirmButton: false});
+                checkFormReady();
+            } else {
+                Swal.fire('ไม่พบข้อมูล', 'ไม่พบนักศึกษารหัสนี้', 'error');
+            }
+        });
+}
 
     function fetchItem(id) {
         // เช็คซ้ำในตะกร้า
@@ -363,17 +352,90 @@ include('../includes/header.php');
 
     // --- 3. กล้อง & Utility ---
 
+   // [Debug Version] ฟังก์ชันเปิดกล้องแบบแสดง Log ละเอียด
     function startCamera() {
-        if (html5QrCode) return;
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
-        .then(() => {
-            document.getElementById('startCameraBtn').style.display = 'none';
-            document.getElementById('stopCameraBtn').style.display = 'inline-block';
-        })
-        .catch(err => Swal.fire('Error', 'เปิดกล้องไม่ได้', 'error'));
-    }
+        // 1. แจ้งสถานะเริ่มต้น
+        console.log("[Debug] เริ่มต้นการเปิดกล้อง...");
+        
+        // 2. เช็คว่าโหลด Library html5-qrcode สำเร็จไหม
+        if (typeof Html5Qrcode === "undefined") {
+            alert("❌ Error: ไม่พบ Library 'html5-qrcode'\nกรุณาตรวจสอบอินเทอร์เน็ต หรือการเชื่อมต่อกับ unpkg.com");
+            return;
+        }
 
+        // 3. ป้องกันการเปิดซ้ำ
+        if (html5QrCode) {
+            alert("⚠️ แจ้งเตือน: กล้องกำลังทำงานอยู่แล้ว");
+            return;
+        }
+
+        // 4. เริ่มกระบวนการค้นหากล้อง (ขั้นตอนนี้จะขอ Permission)
+        Html5Qrcode.getCameras().then(devices => {
+            // -- Log ดูรายการกล้องที่เจอ --
+            console.log("[Debug] รายการกล้องที่พบ:", devices);
+
+            if (devices && devices.length) {
+                // พบกล้อง: เลือกตัวแรกที่เจอ (CameraController จะจัดการเรื่องหน้า/หลังให้เองในระดับ ID)
+                // หรือถ้าต้องการระบุตัว ให้ลองเปลี่ยน index เช่น devices[1].id
+                var cameraId = devices[0].id; 
+                var cameraLabel = devices[0].label;
+                
+                // alert("✅ พบกล้องจำนวน: " + devices.length + " ตัว\nกำลังจะเปิด: " + cameraLabel);
+
+                // สร้าง Instance
+                html5QrCode = new Html5Qrcode("reader");
+
+                // กำหนด Config
+                const config = { 
+                    fps: 10, 
+                    qrbox: { width: 200, height: 200 },
+                    aspectRatio: 1.0 
+                };
+
+                // สั่ง Start ด้วย Camera ID โดยตรง (แม่นยำกว่า facingMode)
+                html5QrCode.start(
+                    cameraId, 
+                    config, 
+                    onScanSuccess // ฟังก์ชันเมื่อสแกนติด
+                )
+                .then(() => {
+                    console.log("[Debug] กล้องเปิดสำเร็จ!");
+                    // จัดการ UI
+                    document.getElementById('startCameraBtn').style.display = 'none';
+                    document.getElementById('stopCameraBtn').style.display = 'inline-block';
+                    
+                    // ซ่อน Icon กล้องปิด
+                    const placeholder = document.querySelector('#reader > div');
+                    if(placeholder) placeholder.style.display = 'none';
+                })
+                .catch(err => {
+                    // Error ตอนสั่ง Start Stream
+                    console.error("[Debug] Start Error:", err);
+                    alert("❌ เปิดภาพไม่ติด (Start Error): " + err);
+                    
+                    // เคลียร์ค่าหากพัง
+                    html5QrCode = null;
+                });
+
+            } else {
+                // ไม่พบกล้องใน list
+                alert("⚠️ ไม่พบอุปกรณ์กล้อง (No cameras found)\nBrowser อาจจะมองไม่เห็น Driver กล้อง");
+            }
+        }).catch(err => {
+            // Error ตอนขอ Permission หรือ getCameras
+            console.error("[Debug] getCameras Error:", err);
+            
+            if (err.name === 'NotAllowedError') {
+                alert("⛔ สิทธิ์ถูกปฏิเสธ (Permission Denied)\nกรุณากดที่รูป 'กุญแจ' หรือ 'ตัว i' ข้าง URL แล้วกด 'อนุญาต (Allow)' กล้อง");
+            } else if (err.name === 'NotFoundError') {
+                alert("⚠️ ไม่พบกล้อง (Not Found)\nกรุณาตรวจสอบการเชื่อมต่อกล้อง");
+            } else if (err.name === 'NotReadableError') {
+                alert("⚠️ กล้องถูกใช้งานอยู่ (Not Readable)\nอาจมีโปรแกรมอื่นใช้กล้องอยู่ หรือ OS บล็อกไว้");
+            } else {
+                alert("❌ เกิดข้อผิดพลาดการเข้าถึงกล้อง:\n" + err);
+            }
+        });
+    }
     function stopCamera() {
         if (html5QrCode) {
             html5QrCode.stop().then(() => {

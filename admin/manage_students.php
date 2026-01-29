@@ -133,60 +133,27 @@ include('../includes/header.php');
                     <th>จัดการ</th>
                 </tr>
             </thead>
-            <tbody>
+          <tbody>
                 <?php if (empty($students)): ?>
-                    <tr>
-                        <td colspan="6" style="text-align: center;">ยังไม่มีข้อมูลผู้ใช้งานในระบบ</td>
-                    </tr>
+                    <tr><td colspan="6" style="text-align: center;">ยังไม่มีข้อมูลผู้ใช้งานในระบบ</td></tr>
                 <?php else: ?>
                     <?php foreach ($students as $student): ?>
                         <tr>
-                            <td class="truncate-text" title="<?php echo htmlspecialchars($student['full_name']); ?>">
-                                <?php echo htmlspecialchars($student['full_name']); ?>
-                            </td>
+                            <td class="truncate-text" title="<?php echo htmlspecialchars($student['full_name']); ?>"><?php echo htmlspecialchars($student['full_name']); ?></td>
                             <td><?php echo htmlspecialchars($student['student_personnel_id'] ?? '-'); ?></td>
-                            <td>
-                                <?php
-                                echo htmlspecialchars($student['status']);
-                                if ($student['status'] == 'other') {
-                                    echo ' (' . htmlspecialchars($student['status_other']) . ')';
-                                }
-                                ?>
-                            </td>
+                            <td><?php echo htmlspecialchars($student['status']) . ($student['status'] == 'other' ? ' (' . htmlspecialchars($student['status_other']) . ')' : ''); ?></td>
                             <td><?php echo htmlspecialchars($student['phone_number'] ?? '-'); ?></td>
-                            <td>
-                                <?php if ($student['line_user_id']): ?>
-                                    <span style="color: #00B900; font-weight: bold;">LINE</span>
-                                <?php else: ?>
-                                    <span style="color: #6c757d;">Admin</span>
-                                <?php endif; ?>
-                            </td>
+                            <td><?php echo ($student['line_user_id']) ? '<span style="color: #00B900; font-weight: bold;">LINE</span>' : '<span style="color: #6c757d;">Admin</span>'; ?></td>
                             <td class="action-buttons">
-                                <button type="button"
-                                    class="btn btn-manage"
-                                    onclick="openEditStudentPopup(<?php echo $student['id']; ?>)">ดู/แก้ไข</button>
-
+                                <button type="button" class="btn btn-manage" onclick="openEditStudentPopup(<?php echo $student['id']; ?>)">ดู/แก้ไข</button>
                                 <?php if ($student['linked_user_id']): ?>
-                                    <button type="button"
-                                        class="btn btn-danger"
-                                        onclick="confirmDemote(<?php echo $student['linked_user_id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name'])); ?>')">
-                                        <i class="fas fa-user-minus"></i> ลดสิทธิ์
-                                    </button>
-
+                                    <button type="button" class="btn btn-danger" onclick="confirmDemote(<?php echo $student['linked_user_id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name'])); ?>')"><i class="fas fa-user-minus"></i> ลดสิทธิ์</button>
                                 <?php else: ?>
                                     <?php if (!empty($student['line_user_id'])): ?>
-                                        <button type="button"
-                                            class="btn"
-                                            style="background-color: #ffc107; color: #333;"
-                                            onclick="openPromotePopup(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name'])); ?>', '<?php echo htmlspecialchars(addslashes($student['line_user_id'])); ?>')">
-                                            <i class="fas fa-user-shield"></i> เลื่อนขั้น
-                                        </button>
+                                        <button type="button" class="btn btn-sm" style="background-color: #06c755; color: white;" onclick="openSendLinePopup(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name'])); ?>')"><i class="fab fa-line"></i> ส่งข้อความ</button>
+                                        <button type="button" class="btn" style="background-color: #ffc107; color: #333;" onclick="openPromotePopup(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['full_name'])); ?>', '<?php echo htmlspecialchars(addslashes($student['line_user_id'])); ?>')"><i class="fas fa-user-shield"></i> เลื่อนขั้น</button>
                                     <?php endif; ?>
-
-                                    <button type="button"
-                                        class="btn btn-danger"
-                                        style="margin-left: 5px;"
-                                        onclick="confirmDeleteStudent(event, <?php echo $student['id']; ?>)">ลบ</button>
+                                    <button type="button" class="btn btn-danger" style="margin-left: 5px;" onclick="confirmDeleteStudent(event, <?php echo $student['id']; ?>)">ลบ</button>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -536,6 +503,10 @@ include('../includes/header.php');
                     preConfirm: () => {
                         const form = document.getElementById('swalEditStudentForm');
                         const fullName = form.querySelector('#swal_edit_full_name').value;
+						if (/[<>]/.test(fullName)) {
+        Swal.showValidationMessage('ไม่อนุญาตให้ใช้อักขระพิเศษ เช่น < หรือ > ในชื่อ');
+        return false;
+    }
                         const status = form.querySelector('#swal_edit_status').value;
                         const statusOther = form.querySelector('#swal_edit_status_other').value;
 
@@ -958,6 +929,26 @@ include('../includes/header.php');
             console.error('Chart theme toggle error:', e);
         }
     });
+	
+	function openSendLinePopup(studentId, studentName) {
+        Swal.fire({
+            title: 'ส่งข้อความ LINE',
+            html: `<p style="text-align:left; margin-bottom:10px;">ถึง: <strong>${studentName}</strong></p><textarea id="line_msg_text" class="swal2-textarea" placeholder="พิมพ์ข้อความที่นี่..." style="margin: 0; width: 100%; height: 100px;"></textarea>`,
+            showCancelButton: true, confirmButtonText: '<i class="fas fa-paper-plane"></i> ส่งเลย', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#06c755',
+            preConfirm: () => {
+                const message = document.getElementById('line_msg_text').value;
+                if (!message) { Swal.showValidationMessage('กรุณาพิมพ์ข้อความ'); return false; }
+                const formData = new FormData();
+                formData.append('student_id', studentId);
+                formData.append('message', message);
+                return fetch('process/admin_send_line_process.php', { method: 'POST', body: formData }).then(r => r.json()).then(d => { if (d.status !== 'success') throw new Error(d.message); return d; }).catch(e => { Swal.showValidationMessage(e.message); });
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ icon: 'success', title: 'ส่งเรียบร้อย!', text: 'ข้อความถูกส่งไปยังผู้ใช้แล้ว', timer: 1500, showConfirmButton: false });
+            }
+        });
+    }
 </script>
 
 <?php

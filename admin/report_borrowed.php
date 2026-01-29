@@ -1,302 +1,311 @@
 <?php
-// [แก้ไขไฟล์: napat-tirmongkol/e-borrow/E-Borrow-c4df732f98db10bf52a8e9d7299e212b6f2abd37/admin/report_borrowed.php]
-// (เวอร์ชัน v3 - เพิ่ม Mobile Card Layout)
-
+// admin/report_borrowed.php
 include('../includes/check_session.php');
 require_once('../includes/db_connect.php');
 
-// 2. ตรวจสอบสิทธิ์ Admin
+// 1. ตรวจสอบสิทธิ์
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: index.php");
     exit;
 }
 
-// (ฟังก์ชันสำหรับ Export Excel)
-function exportToExcel($data, $filename = "รายงานการยืมคืน") {
-    header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment;filename="' . $filename . '_' . date('YmdHi') . '.xls"');
-    header('Cache-Control: max-age=0');
+// 2. ส่วน PHP: จัดการข้อมูล (รองรับทั้งโหลดปกติ และ AJAX Request)
+$start_date = $_GET['start_date'] ?? null;
+$end_date = $_GET['end_date'] ?? null;
+$status_filter = $_GET['status'] ?? '';
 
-    $output = fopen("php://output", "w");
-    
-    // (ใส่ BOM สำหรับ UTF-8 เพื่อให้อ่านภาษาไทยใน Excel ได้)
-    fputs($output, $bom =( chr(0xEF) . chr(0xBB) . chr(0xBF) ));
+$sql = "SELECT 
+            t.id as transaction_id, t.borrow_date, t.due_date, t.return_date, t.status,
+            et.name as type_name, et.image_url, 
+            ei.name as item_name, ei.serial_number,
+            s.full_name as student_name, s.student_personnel_id, s.phone_number as student_phone,
+            s.status as student_status, s.status_other,
+            f.amount as fine_amount
+        FROM med_transactions t
+        LEFT JOIN med_equipment_types et ON t.type_id = et.id
+        LEFT JOIN med_equipment_items ei ON t.item_id = ei.id
+        LEFT JOIN med_students s ON t.borrower_student_id = s.id
+        LEFT JOIN med_fines f ON t.id = f.transaction_id
+        WHERE 1=1 ";
 
-    // หัวตาราง
-    fputcsv($output, [
-        'ID', 'ประเภท', 'ชื่อ/รุ่น', 'ซีเรียล', 
-        'ผู้ยืม', 'รหัสนักศึกษา/บุคลากร', 'เบอร์โทร', 'สถานภาพ', 
-        'วันที่ยืม', 'กำหนดคืน', 'วันที่คืนจริง', 
-        'สถานะ', 'ค่าปรับ (บาท)'
-    ], "\t"); // (ใช้ Tab เป็นตัวคั่น)
+$params = [];
 
-    // ข้อมูล
-    foreach ($data as $row) {
-        // (เตรียมข้อมูล)
-        $status_text = $row['status'];
-        if ($status_text == 'borrowed') $status_text = 'ยืมอยู่';
-        if ($status_text == 'returned') $status_text = 'คืนแล้ว';
-        
-        $student_status = $row['student_status'];
-        if ($student_status == 'other') {
-            $student_status = 'อื่นๆ (' . $row['student_status_other'] . ')';
-        }
-
-        fputcsv($output, [
-            $row['transaction_id'],
-            $row['type_name'],
-            $row['item_name'],
-            $row['serial_number'] ?? '-',
-            $row['student_name'],
-            $row['student_personnel_id'] ?? '-',
-            $row['student_phone'] ?? '-',
-            $student_status,
-            $row['borrow_date'],
-            $row['due_date'],
-            $row['return_date'] ?? 'ยังไม่คืน',
-            $status_text,
-            $row['fine_amount'] ?? '0.00'
-        ], "\t");
-    }
-
-    fclose($output);
-    exit;
+if (!empty($start_date)) {
+    $sql .= " AND DATE(t.borrow_date) >= ?";
+    $params[] = $start_date;
+}
+if (!empty($end_date)) {
+    $sql .= " AND DATE(t.borrow_date) <= ?";
+    $params[] = $end_date;
+}
+if (!empty($status_filter)) {
+    $sql .= " AND t.status = ?";
+    $params[] = $status_filter;
 }
 
-// 3. (Query หลัก) ดึงข้อมูลการยืมทั้งหมด
+$sql .= " ORDER BY t.borrow_date DESC";
+
 try {
-    // (กำหนดค่าเริ่มต้นสำหรับ Filter)
-    $start_date = $_GET['start_date'] ?? null;
-    $end_date = $_GET['end_date'] ?? null;
-    $status_filter = $_GET['status'] ?? '';
-
-    $sql = "SELECT 
-                t.id as transaction_id, t.borrow_date, t.due_date, t.return_date, t.status,
-                et.name as type_name,
-                et.image_url, 
-                ei.name as item_name, ei.serial_number,
-                s.full_name as student_name, s.student_personnel_id, s.phone_number as student_phone,
-                s.status as student_status, s.status_other,
-                f.amount as fine_amount
-            FROM med_transactions t
-            LEFT JOIN med_equipment_types et ON t.type_id = et.id
-            LEFT JOIN med_equipment_items ei ON t.item_id = ei.id
-            LEFT JOIN med_students s ON t.borrower_student_id = s.id
-            LEFT JOIN med_fines f ON t.id = f.transaction_id
-            WHERE 1=1 ";
-
-    $params = [];
-
-    // (เพิ่มเงื่อนไข Filter)
-    if (!empty($start_date)) {
-        $sql .= " AND DATE(t.borrow_date) >= ?";
-        $params[] = $start_date;
-    }
-    if (!empty($end_date)) {
-        $sql .= " AND DATE(t.borrow_date) <= ?";
-        $params[] = $end_date;
-    }
-    if (!empty($status_filter)) {
-        $sql .= " AND t.status = ?";
-        $params[] = $status_filter;
-    }
-
-    $sql .= " ORDER BY t.borrow_date DESC";
-    
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // (ตรวจสอบ ถ้ามีการร้องขอ Export)
-    if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-        exportToExcel($transactions, "รายงานการยืมคืน"); 
-    }
-
 } catch (PDOException $e) {
-    $error_message = "เกิดข้อผิดพลาดในการดึงข้อมูล: " . $e->getMessage();
     $transactions = [];
+    $error_message = $e->getMessage();
 }
 
-// 4. ตั้งค่าตัวแปรสำหรับ Header
+// --- ตรวจสอบว่าเป็น AJAX Request หรือไม่ ---
+if (isset($_GET['ajax_table']) && $_GET['ajax_table'] == '1') {
+    if (empty($transactions)) {
+        echo '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #888;">ไม่พบข้อมูลในช่วงเวลานี้</td></tr>';
+    } else {
+        foreach ($transactions as $item) {
+            $image_path = $item['image_url'] ?? null;
+            $img_html = $image_path 
+                ? '<img src="'.htmlspecialchars($image_path).'" alt="รูป" class="item-thumbnail" onerror="this.style.display=\'none\'">' 
+                : '<div class="equipment-card-image-placeholder item-thumbnail"><i class="fas fa-camera"></i></div>';
+
+            $status_badge = '';
+            if ($item['status'] == 'returned') {
+                $status_badge = '<span class="status-badge returned"><i class="fas fa-check-circle"></i> คืนแล้ว</span>';
+            } else {
+                $status_badge = '<span class="status-badge borrowed"><i class="fas fa-hourglass-half"></i> ยืมอยู่</span>';
+            }
+            
+            $return_date_txt = $item['return_date'] ? date('d/m/Y', strtotime($item['return_date'])) : '<span class="text-muted">ยังไม่คืน</span>';
+
+            echo '<tr>
+                <td>
+                    <div class="item-cell">
+                        '.$img_html.'
+                        <div class="item-details">
+                            <strong>'.htmlspecialchars($item['item_name']).'</strong>
+                            <small>('.htmlspecialchars($item['type_name']).')</small>
+                            <small>S/N: '.htmlspecialchars($item['serial_number'] ?? 'N/A').'</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <strong>'.htmlspecialchars($item['student_name']).'</strong><br>
+                    <small>'.htmlspecialchars($item['student_personnel_id'] ?? 'N/A').'</small>
+                </td>
+                <td>'.date('d/m/Y', strtotime($item['borrow_date'])).'</td>
+                <td>'.date('d/m/Y', strtotime($item['due_date'])).'</td>
+                <td>'.$return_date_txt.'</td>
+                <td>'.$status_badge.'</td>
+            </tr>';
+        }
+    }
+    exit;
+}
+
 $page_title = "รายงานการยืม-คืน";
 $current_page = "report";
 include('../includes/header.php');
 ?>
 
+<style>
+    .time-filter-group { display: flex; align-items: center; background-color: #1e1e1e; padding: 6px 15px; border-radius: 8px; gap: 15px; color: #e0e0e0; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-wrap: wrap; }
+    .time-filter-btn { background: none; border: none; color: #4dabf7; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 4px 8px; transition: all 0.2s; border-radius: 4px; font-family: 'RSU', sans-serif; font-weight: bold; font-size: 1rem; }
+    .time-filter-btn:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
+    
+    .time-filter-select { background-color: transparent !important; color: #fff !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; border-radius: 4px; cursor: pointer; font-family: 'RSU', sans-serif; font-size: 0.95rem; outline: none; padding: 4px 8px; box-shadow: none !important; }
+    .time-filter-select option { color: #333; background: #fff; }
+    
+    .toolbar-separator { width: 1px; height: 20px; background-color: #555; display: inline-block; }
+    .data-section-wrapper { position: relative; min-height: 100px; }
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); z-index: 10; display: none; justify-content: center; align-items: flex-start; padding-top: 50px; border-radius: var(--border-radius-main); }
+    body.dark-mode .loading-overlay { background: rgba(45, 55, 72, 0.8); }
+    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+
 <div class="main-container"> 
-
-    <?php if (isset($error_message)): ?>
-        <div class="section-card" style="background-color: var(--color-danger); color: white;">
-            <?php echo $error_message; ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="header-row">
-        <h2><i class="fas fa-chart-line"></i> รายงานการยืม-คืนทั้งหมด</h2>
-        <div>
-            <a href="?<?php echo http_build_query(array_merge($_GET, ['export' => 'excel'])); ?>" class="btn btn-success">
+    <div class="header-row" style="flex-wrap: wrap; gap: 15px; align-items: center;">
+        <h2><i class="fas fa-chart-line"></i> รายงานการยืม-คืน</h2>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div class="time-filter-group">
+                <button type="button" class="time-filter-btn" onclick="refreshTable()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <span class="toolbar-separator"></span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="far fa-clock" style="color: #aaa;"></i>
+                    <select class="time-filter-select" id="timeRangeSelect" onchange="handleTimeRangeChange(this.value)">
+                        <option value="" disabled selected>เลือกช่วงเวลา</option>
+                        <option value="today">วันนี้ (Today)</option>
+                        <option value="48h">2 วันย้อนหลัง (Last 48h)</option>
+                        <option value="7d">7 วันย้อนหลัง</option>
+                        <option value="30d">30 วันย้อนหลัง</option>
+                        <option value="custom">กำหนดเอง (Custom range)...</option>
+                    </select>
+                </div>
+                <span class="toolbar-separator"></span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #aaa; font-size: 0.9rem;">สถานะ:</span>
+                    <select class="time-filter-select" id="statusFilter" onchange="refreshTable()" style="min-width: 100px;">
+                        <option value="">ทั้งหมด</option>
+                        <option value="borrowed" <?php echo ($status_filter == 'borrowed') ? 'selected' : ''; ?>>กำลังยืม</option>
+                        <option value="returned" <?php echo ($status_filter == 'returned') ? 'selected' : ''; ?>>คืนแล้ว</option>
+                    </select>
+                    <i class="fas fa-chevron-down" style="font-size: 0.7rem; color: #aaa; margin-left: -20px; pointer-events: none;"></i>
+                </div>
+            </div>
+            <a href="admin/report_borrowed.php?<?php echo http_build_query(array_merge($_GET, ['export' => 'excel'])); ?>" class="btn btn-success">
                 <i class="fas fa-file-excel"></i> Export
             </a>
-            <button onclick="window.print()" class="btn btn-secondary">
-                <i class="fas fa-print"></i> พิมพ์
-            </button>
         </div>
     </div>
 
-    <div class="filter-row section-card" style="margin-bottom: 1.5rem;">
-        <form action="admin/report_borrowed.php" method="GET" style="display: contents; gap: 1rem;">
-            <label for="start_date">ตั้งแต่วันที่:</label>
-            <input type="date" name="start_date" id="start_date" value="<?php echo htmlspecialchars($start_date ?? ''); ?>">
-
-            <label for="end_date">ถึงวันที่:</label>
-            <input type="date" name="end_date" id="end_date" value="<?php echo htmlspecialchars($end_date ?? ''); ?>">
-
-            <label for="status">สถานะ:</label>
-            <select name="status" id="status">
-                <option value="">-- ทั้งหมด --</option>
-                <option value="borrowed" <?php echo ($status_filter == 'borrowed') ? 'selected' : ''; ?>>ยืมอยู่ (Borrowed)</option>
-                <option value="returned" <?php echo ($status_filter == 'returned') ? 'selected' : ''; ?>>คืนแล้ว (Returned)</option>
-            </select>
-
-            <button type="submit" class="btn btn-return"><i class="fas fa-filter"></i> กรอง</button>
-            <a href="admin/report_borrowed.php" class="btn btn-secondary"><i class="fas fa-times"></i> ล้างค่า</a>
-        </form>
-    </div>
-
+    <input type="hidden" id="hidden_start_date" value="<?php echo htmlspecialchars($start_date ?? ''); ?>">
+    <input type="hidden" id="hidden_end_date" value="<?php echo htmlspecialchars($end_date ?? ''); ?>">
+    
     <div class="section-card desktop-only" style="padding: 0;"> 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>อุปกรณ์</th>
-                        <th>ผู้ยืม</th>
-                        <th>วันที่ยืม</th>
-                        <th>กำหนดคืน</th>
-                        <th>วันที่คืนจริง</th>
-                        <th>สถานะ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($transactions)): ?>
+        <div class="table-wrapper">
+            <div id="tableLoader" class="loading-overlay">
+                <div class="spinner"></div>
+                <div style="font-weight: bold; color: var(--color-primary);">กำลังโหลดข้อมูล...</div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <td colspan="6" style="text-align: center;">ไม่พบข้อมูลการทำรายการ</td>
+                            <th>อุปกรณ์</th>
+                            <th>ผู้ยืม</th>
+                            <th>วันที่ยืม</th>
+                            <th>กำหนดคืน</th>
+                            <th>วันที่คืนจริง</th>
+                            <th>สถานะ</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach ($transactions as $item): ?>
-                            <tr>
-                                <td>
-                                    <div class="item-cell">
-                                        <?php 
-                                        $image_path = $item['image_url'] ?? null;
-                                        if ($image_path): 
-                                        ?>
-                                            <img src="<?php echo htmlspecialchars($image_path); ?>" 
-                                                 alt="รูป" 
-                                                 class="item-thumbnail"
-                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                                            <div class="equipment-card-image-placeholder item-thumbnail" style="display: none;"><i class="fas fa-image"></i></div>
-                                        <?php else: ?>
-                                            <div class="equipment-card-image-placeholder item-thumbnail">
-                                                <i class="fas fa-camera"></i>
+                    </thead>
+                    <tbody id="reportTableBody">
+                        <?php 
+                        if (empty($transactions)) {
+                            echo '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">ไม่พบข้อมูลการทำรายการ</td></tr>';
+                        } else {
+                            foreach ($transactions as $item) {
+                                // (เหมือนข้างบน) ...
+                                $image_path = $item['image_url'] ?? null;
+                                if ($image_path) {
+                                    $img_html = '<img src="'.htmlspecialchars($image_path).'" alt="รูป" class="item-thumbnail" onerror="this.style.display=\'none\'">';
+                                } else {
+                                    $img_html = '<div class="equipment-card-image-placeholder item-thumbnail"><i class="fas fa-camera"></i></div>';
+                                }
+                                $status_badge = ($item['status'] == 'returned') ? '<span class="status-badge returned"><i class="fas fa-check-circle"></i> คืนแล้ว</span>' : '<span class="status-badge borrowed"><i class="fas fa-hourglass-half"></i> ยืมอยู่</span>';
+                                $return_date_txt = $item['return_date'] ? date('d/m/Y', strtotime($item['return_date'])) : '<span class="text-muted">ยังไม่คืน</span>';
+
+                                echo '<tr>
+                                    <td>
+                                        <div class="item-cell">
+                                            '.$img_html.'
+                                            <div class="item-details">
+                                                <strong>'.htmlspecialchars($item['item_name']).'</strong>
+                                                <small>('.htmlspecialchars($item['type_name']).')</small>
+                                                <small>S/N: '.htmlspecialchars($item['serial_number'] ?? 'N/A').'</small>
                                             </div>
-                                        <?php endif; ?>
-                                        
-                                        <div class="item-details">
-                                            <strong><?php echo htmlspecialchars($item['item_name']); ?></strong>
-                                            <small>(<?php echo htmlspecialchars($item['type_name']); ?>)</small>
-                                            <small>S/N: <?php echo htmlspecialchars($item['serial_number'] ?? 'N/A'); ?></small>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($item['student_name']); ?></strong><br>
-                                    <small><?php echo htmlspecialchars($item['student_personnel_id'] ?? 'N/A'); ?></small>
-                                </td>
-                                <td><?php echo date('d/m/Y', strtotime($item['borrow_date'])); ?></td>
-                                <td><?php echo date('d/m/Y', strtotime($item['due_date'])); ?></td>
-                                <td>
-                                    <?php if ($item['return_date']): ?>
-                                        <?php echo date('d/m/Y', strtotime($item['return_date'])); ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">ยังไม่คืน</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($item['status'] == 'returned'): ?>
-                                        <span class="status-badge returned">
-                                            <i class="fas fa-check-circle"></i> คืนแล้ว
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="status-badge borrowed">
-                                            <i class="fas fa-hourglass-half"></i> ยืมอยู่
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                                    </td>
+                                    <td>
+                                        <strong>'.htmlspecialchars($item['student_name']).'</strong><br>
+                                        <small>'.htmlspecialchars($item['student_personnel_id'] ?? 'N/A').'</small>
+                                    </td>
+                                    <td>'.date('d/m/Y', strtotime($item['borrow_date'])).'</td>
+                                    <td>'.date('d/m/Y', strtotime($item['due_date'])).'</td>
+                                    <td>'.$return_date_txt.'</td>
+                                    <td>'.$status_badge.'</td>
+                                </tr>';
+                            }
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-
-    <div class="student-card-list">
-        <?php if (empty($transactions)): ?>
-            <div class="history-card">
-                <p style="text-align: center; width: 100%;">ไม่พบข้อมูลการทำรายการ</p>
-            </div>
-        <?php else: ?>
-            <?php foreach ($transactions as $item): ?>
-                
-                <?php
-                // (ตรรกะ Badge และ Icon)
-                $badge_class = 'borrowed';
-                $icon_class = 'fas fa-hourglass-half';
-                if ($item['status'] == 'returned') {
-                    $badge_class = 'returned';
-                    $icon_class = 'fas fa-check-circle';
-                }
-                ?>
-
-                <div class="history-card">
-                    
-                    <div class="history-card-icon">
-                        <span class="status-badge <?php echo $badge_class; ?>">
-                            <i class="<?php echo $icon_class; ?>"></i>
-                        </span>
-                    </div>
-                    
-                    <div class="history-card-info">
-                        <h4 class="truncate-text" title="<?php echo htmlspecialchars($item['item_name']); ?>">
-                            <?php echo htmlspecialchars($item['item_name']); ?>
-                        </h4>
-                        <p>
-                            ผู้ยืม: <strong><?php echo htmlspecialchars($item['student_name']); ?></strong>
-                        </p>
-                        <p style="font-size: 0.9em;">
-                            กำหนดคืน: <?php echo date('d/m/Y', strtotime($item['due_date'])); ?>
-                        </p>
-                    </div>
-                    
-                    <div class="history-card-status">
-                        <?php if ($item['status'] == 'returned'): ?>
-                            <span class="status-badge returned">
-                                <i class="fas fa-check-circle"></i> คืนแล้ว
-                            </span>
-                        <?php else: ?>
-                            <span class="status-badge borrowed">
-                                <i class="fas fa-hourglass-half"></i> ยืมอยู่
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+    
+    <div class="student-card-list mobile-only">
+         <p style="text-align: center; padding: 20px; color: #999;">(กรุณาดูในมุมมอง Desktop เพื่อใช้ฟีเจอร์ Refresh ตารางแบบ Real-time)</p>
     </div>
-
 </div> 
 
-<?php
-// 5. เรียกใช้ Footer
-include('../includes/footer.php');
-?>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function refreshTable(customStartDate = null, customEndDate = null) {
+    let startDate = customStartDate || document.getElementById('hidden_start_date').value;
+    let endDate = customEndDate || document.getElementById('hidden_end_date').value;
+    let status = document.getElementById('statusFilter').value;
+
+    const loader = document.getElementById('tableLoader');
+    loader.style.display = 'flex';
+
+    const params = new URLSearchParams({ ajax_table: '1', start_date: startDate, end_date: endDate, status: status });
+
+    fetch(`admin/report_borrowed.php?${params.toString()}`)
+        .then(response => response.text())
+        .then(html => {
+            setTimeout(() => {
+                document.getElementById('reportTableBody').innerHTML = html;
+                loader.style.display = 'none';
+                if(customStartDate) document.getElementById('hidden_start_date').value = customStartDate;
+                if(customEndDate) document.getElementById('hidden_end_date').value = customEndDate;
+            }, 300);
+        })
+        .catch(err => {
+            console.error(err);
+            loader.style.display = 'none';
+            Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
+        });
+}
+
+function handleTimeRangeChange(value) {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+    if (value === 'custom') { openCustomRangePopup(); document.getElementById('timeRangeSelect').value = ""; return; }
+    switch(value) {
+        case 'today': break;
+        case '48h': start.setDate(today.getDate() - 1); break;
+        case '7d': start.setDate(today.getDate() - 7); break;
+        case '30d': start.setDate(today.getDate() - 30); break;
+        default: return;
+    }
+    refreshTable(formatDate(start), formatDate(end));
+}
+
+function openCustomRangePopup() {
+    Swal.fire({
+        title: '<span style="font-size: 1.1rem;">Select a custom date range</span>',
+        background: '#222', color: '#fff',
+        html: `
+            <div style="text-align: left; padding: 0 10px;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px; font-size: 0.9rem; color: #ccc;">From:</label>
+                    <input type="date" id="swal-start-date" class="swal2-input" style="width: 100%; margin: 0; background: #333; color: #fff; border: 1px solid #555;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px; font-size: 0.9rem; color: #ccc;">To:</label>
+                    <input type="date" id="swal-end-date" class="swal2-input" style="width: 100%; margin: 0; background: #333; color: #fff; border: 1px solid #555;">
+                </div>
+            </div>`,
+        showCancelButton: true, confirmButtonText: 'OK', confirmButtonColor: '#0078d4', cancelButtonText: 'Cancel', cancelButtonColor: '#333',
+        preConfirm: () => {
+            const s = document.getElementById('swal-start-date').value;
+            const e = document.getElementById('swal-end-date').value;
+            if (!s || !e) { Swal.showValidationMessage('กรุณาเลือกวันที่ให้ครบถ้วน'); return false; }
+            if (s > e) { Swal.showValidationMessage('วันที่เริ่มต้น ต้องไม่มากกว่าวันที่สิ้นสุด'); return false; }
+            return { start: s, end: e };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) { refreshTable(result.value.start, result.value.end); }
+    });
+}
+</script>
+<?php include('../includes/footer.php'); ?>
