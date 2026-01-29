@@ -1,88 +1,83 @@
 <?php
-// add_staff_process.php
-// (ไฟล์ใหม่)
+// [แก้ไข: process/add_staff_process.php]
+// แก้ไขชื่อคอลัมน์ให้ตรงกับ DB: password -> password_hash และลบ created_at ออก
 
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('../includes/check_session_ajax.php');
-require_once('../includes/db_connect.php');
-require_once('../includes/log_function.php'); // ◀️ (เพิ่ม) เรียกใช้ Log
+// 1. ตั้งค่าการแสดงผล Error
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
-    exit;
-}
-header('Content-Type: application/json');
+// 2. กำหนด Header เป็น JSON
+header('Content-Type: application/json; charset=utf-8');
 
-// 3. สร้างตัวแปรสำหรับเก็บคำตอบ
-$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
+require_once '../includes/db_connect.php'; 
+session_start();
 
-// 4. ตรวจสอบว่าเป็นการส่งข้อมูลแบบ POST หรือไม่
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'];
 
-    // 5. รับข้อมูลจากฟอร์ม AJAX
-    $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-    $password = isset($_POST['password']) ? trim($_POST['password']) : '';
-    $full_name = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
-    $role     = isset($_POST['role']) ? trim($_POST['role']) : 'employee';
+try {
+    // 3. ตรวจสอบสิทธิ์ (Admin เท่านั้น)
+    if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin'])) {
+        throw new Exception('คุณไม่มีสิทธิ์ดำเนินการนี้ (Access Denied)');
+    }
 
+    // 4. ตรวจสอบ Method
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('Invalid Request Method');
+    }
+
+    // 5. รับค่าจาก Form
+    $username  = trim($_POST['username'] ?? '');
+    $password  = trim($_POST['password'] ?? '');
+    $full_name = trim($_POST['full_name'] ?? '');
+    $role      = trim($_POST['role'] ?? 'employee');
+
+    // 6. Validation
     if (empty($username) || empty($password) || empty($full_name)) {
-        $response['message'] = 'ข้อมูลที่ส่งมาไม่ครบถ้วน (Username, Password, ชื่อ-สกุล)';
-        echo json_encode($response);
-        exit;
-    }
-    if ($role != 'admin' && $role != 'employee') {
-        $response['message'] = 'สิทธิ์ (Role) ไม่ถูกต้อง';
-        echo json_encode($response);
-        exit;
-    }
-	if (!in_array($role, ['admin', 'employee', 'editor'])) {
-        $response['message'] = 'สิทธิ์ (Role) ไม่ถูกต้อง';
-
-    // 6. ดำเนินการ INSERT
-    try {
-        // 6.1 ตรวจสอบว่า Username นี้ถูกใช้ไปหรือยัง
-        $stmt_check_user = $pdo->prepare("SELECT id FROM med_users WHERE username = ?");
-        $stmt_check_user->execute([$username]);
-        if ($stmt_check_user->fetch()) {
-            throw new Exception("Username '$username' นี้ถูกใช้งานแล้ว");
-        }
-        
-        // 6.2 เข้ารหัสรหัสผ่าน
-        $password_hash = password_hash($password, PASSWORD_DEFAULT);
-
-        // 6.3 (SQL) INSERT ข้อมูลเข้า med_users
-        $sql = "INSERT INTO med_users (username, password_hash, full_name, role) 
-                VALUES (?, ?, ?, ?)";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$username, $password_hash, $full_name, $role]);
-
-        $new_user_id = $pdo->lastInsertId();
-
-        // ◀️ --- (เพิ่มส่วน Log) --- ◀️
-        if ($stmt->rowCount() > 0) {
-            $admin_user_id = $_SESSION['user_id'] ?? null;
-            $admin_user_name = $_SESSION['full_name'] ?? 'System';
-            $log_desc = "Admin '{$admin_user_name}' (ID: {$admin_user_id}) ได้เพิ่มบัญชีพนักงานใหม่: '{$full_name}' (Username: {$username}, Role: {$role}) (ID ใหม่: {$new_user_id})";
-            log_action($pdo, $admin_user_id, 'create_staff', $log_desc);
-        }
-        // ◀️ --- (จบส่วน Log) --- ◀️
-
-        // 7. ถ้าสำเร็จ ให้เปลี่ยนคำตอบ
-        $response['status'] = 'success';
-        $response['message'] = 'เพิ่มบัญชีพนักงานสำเร็จ';
-
-    } catch (Exception $e) {
-        $response['message'] = $e->getMessage(); // ◀️ (แก้ไข)
+        throw new Exception('กรุณากรอกข้อมูลให้ครบถ้วน (Username, Password, ชื่อ-สกุล)');
     }
 
-} else {
-    $response['message'] = 'ต้องใช้วิธี POST เท่านั้น';
+    // 7. เช็ค Username ซ้ำ (ตาราง med_users)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM med_users WHERE username = ?");
+    $stmt->execute([$username]);
+    if ($stmt->fetchColumn() > 0) {
+        throw new Exception("Username '$username' มีผู้ใช้งานแล้ว กรุณาใช้ชื่ออื่น");
+    }
+
+    // 8. สร้าง Hash Password
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+    // 9. บันทึกข้อมูล (แก้ไขชื่อคอลัมน์ให้ตรงกับ SQL)
+    // - เปลี่ยน password เป็น password_hash
+    // - ลบ created_at ออก (เพราะในตารางไม่มี)
+    $sql = "INSERT INTO med_users (username, password_hash, full_name, role) 
+            VALUES (:username, :password, :full_name, :role)";
+    
+    $stmt = $pdo->prepare($sql);
+    $result = $stmt->execute([
+        ':username' => $username,
+        ':password' => $hashed_password, // map เข้ากับ password_hash
+        ':full_name' => $full_name,
+        ':role' => $role
+    ]);
+
+    if ($result) {
+        $response = [
+            'status' => 'success', 
+            'message' => 'เพิ่มบัญชีพนักงานเรียบร้อยแล้ว'
+        ];
+    } else {
+        throw new Exception('เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล');
+    }
+
+} catch (PDOException $e) {
+    // กรณี Database Error
+    $response['message'] = 'Database Error: ' . $e->getMessage();
+} catch (Exception $e) {
+    // กรณี Error ทั่วไป
+    $response['message'] = $e->getMessage();
 }
 
-// 8. ส่งคำตอบ (JSON) กลับไปให้ JavaScript
 echo json_encode($response);
 exit;
 ?>

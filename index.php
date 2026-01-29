@@ -214,7 +214,10 @@ include('includes/student_header.php');
 function showHomeQRCode() {
     const studentCode = "<?php echo htmlspecialchars($student_data['student_personnel_id']); ?>"; 
     const studentName = "<?php echo htmlspecialchars($student_data['full_name']); ?>";
-    const qrData = "MEDLOAN_STUDENT:" + studentCode;
+    const studentDbId = "<?php echo $student_id; ?>"; 
+    
+    // QR Format ใหม่
+    const qrData = "MEDLOAN_STUDENT:" + studentCode + ":" + studentDbId;
 
     Swal.fire({
         title: 'QR Code ประจำตัว',
@@ -227,14 +230,10 @@ function showHomeQRCode() {
         `,
         didOpen: () => {
             new QRCode(document.getElementById("qrcode-home-container"), {
-                text: qrData,
-                width: 220,
-                height: 220,
-                correctLevel : QRCode.CorrectLevel.H
+                text: qrData, width: 220, height: 220, correctLevel : QRCode.CorrectLevel.H
             });
         },
-        confirmButtonText: 'ปิด',
-        confirmButtonColor: '#6c757d'
+        confirmButtonText: 'ปิด', confirmButtonColor: '#6c757d'
     });
 }
 </script>

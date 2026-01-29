@@ -1,12 +1,22 @@
 <?php
-// เริ่ม Session
 session_start();
 
-// 1. ล้างข้อมูล Session ทั้งหมด
-session_unset();
+// 1. ลบข้อมูลใน Session array
+$_SESSION = array();
+
+// 2. ลบ Session Cookie ใน Browser
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000,
+        $params["path"], $params["domain"],
+        $params["secure"], $params["httponly"]
+    );
+}
+
+// 3. ทำลาย Session บน Server
 session_destroy();
 
-// 2. ส่งผู้ใช้กลับไปหน้า Login ของ LINE
-header("Location: login.php");
+// 4. ส่งกลับหน้า Login
+header("Location: index.php");
 exit;
 ?>

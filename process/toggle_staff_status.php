@@ -1,78 +1,70 @@
 <?php
-// toggle_staff_status.php
-// (ไฟล์ใหม่)
+// [แก้ไข: process/toggle_staff_status.php]
+// ปรับชื่อตัวแปรให้ตรงกับ admin_app.js (user_id, new_status)
 
-// 1. "จ้างยาม" และ "เชื่อมต่อ DB"
-include('includes/check_session_ajax.php');
-require_once('db_connect.php');
-require_once('includes/log_function.php');
+// 1. ตั้งค่า Error Reporting
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// 2. ตรวจสอบสิทธิ์ Admin และตั้งค่า Header
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์ดำเนินการ']);
-    exit;
-}
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-// 3. สร้างตัวแปรสำหรับเก็บคำตอบ
-$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'];
+require_once '../includes/db_connect.php';
 
-// 4. ตรวจสอบว่าเป็นการส่งข้อมูลแบบ POST
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+$response = ['status' => 'error', 'message' => 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'];
 
-    // 5. รับ ID พนักงาน และ สถานะใหม่
-    $user_id = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
-    $new_status = isset($_POST['new_status']) ? $_POST['new_status'] : '';
+try {
+    session_start();
 
-    if ($user_id == 0 || ($new_status != 'active' && $new_status != 'disabled')) {
-        $response['message'] = 'ข้อมูลที่ส่งมาไม่ถูกต้อง';
-        echo json_encode($response);
-        exit;
+    // 2. ตรวจสอบสิทธิ์ Admin
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+        throw new Exception('คุณไม่มีสิทธิ์ดำเนินการนี้ (Access Denied)');
     }
+
+    // 3. รับค่าจาก AJAX (แก้ไขให้รองรับชื่อตัวแปรจาก admin_app.js)
+    // JS ส่ง: formData.append('user_id', userId);
+    // JS ส่ง: formData.append('new_status', newStatus);
     
-    // (สำคัญ) ป้องกัน Admin ระงับบัญชีตัวเอง
-    if ($user_id == $_SESSION['user_id']) {
-         $response['message'] = 'คุณไม่สามารถระงับบัญชีของตัวเองได้';
-         echo json_encode($response);
-         exit;
+    $target_id = $_POST['user_id'] ?? $_POST['id'] ?? null; 
+    $target_status = $_POST['new_status'] ?? $_POST['status'] ?? null;
+
+    // 4. Debug: ถ้าไม่เจอ ID ให้แจ้งกลับไปว่าได้รับอะไรมาบ้าง
+    if (!$target_id) {
+        $received_data = json_encode($_POST); // แปลงข้อมูลที่ได้รับเป็นข้อความ
+        throw new Exception("ไม่พบข้อมูล ID ผู้ใช้งาน (Server ได้รับ: $received_data)");
     }
 
-    try {
-        // 6. อัปเดตฐานข้อมูล
-        $sql = "UPDATE med_users SET account_status = ? WHERE id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$new_status, $user_id]);
-
-        if ($stmt->rowCount() > 0) {
-            
-            // 7. บันทึก Log
-            $admin_user_id = $_SESSION['user_id'] ?? null;
-            $admin_user_name = $_SESSION['full_name'] ?? 'System';
-            $action_text = ($new_status == 'disabled') ? 'ระงับบัญชี' : 'เปิดใช้งานบัญชี';
-            
-            $stmt_get = $pdo->prepare("SELECT username FROM med_users WHERE id = ?");
-            $stmt_get->execute([$user_id]);
-            $staff_username = $stmt_get->fetchColumn();
-
-            $log_desc = "Admin '{$admin_user_name}' (ID: {$admin_user_id}) ได้{$action_text}พนักงาน: '{$staff_username}' (UID: {$user_id})";
-            log_action($pdo, $admin_user_id, 'toggle_staff_status', $log_desc);
-
-            $response['status'] = 'success';
-            $response['message'] = "{$action_text} สำเร็จ";
-        } else {
-            throw new Exception("ไม่พบบัญชีพนักงาน หรือสถานะเหมือนเดิม");
-        }
-
-    } catch (Exception $e) {
-        $response['message'] = $e->getMessage();
+    // 5. ป้องกันการระงับตัวเอง
+    if ($target_id == $_SESSION['user_id']) {
+        throw new Exception('ไม่สามารถระงับบัญชีของตัวเองได้');
     }
 
-} else {
-    $response['message'] = 'ต้องใช้วิธี POST เท่านั้น';
+    // 6. กำหนดค่าสถานะที่จะบันทึก (active/disabled)
+    // admin_app.js ส่งค่ามาเป็น 'active' หรือ 'disabled' ตรงๆ อยู่แล้ว
+    $final_status = ($target_status === 'disabled') ? 'disabled' : 'active';
+
+    // 7. อัปเดตข้อมูล (ใช้ med_users และ account_status)
+    $sql = "UPDATE med_users SET account_status = :status WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $result = $stmt->execute([
+        ':status' => $final_status,
+        ':id' => $target_id
+    ]);
+
+    if ($result) {
+        $response = [
+            'status' => 'success',
+            'message' => 'อัปเดตสถานะเป็น ' . ($final_status == 'active' ? 'ปกติ (Active)' : 'ระงับ (Disabled)') . ' เรียบร้อยแล้ว',
+            'new_status' => $final_status
+        ];
+    } else {
+        throw new Exception('เกิดข้อผิดพลาดในการอัปเดตฐานข้อมูล');
+    }
+
+} catch (Exception $e) {
+    $response['message'] = $e->getMessage();
 }
 
-// 9. ส่งคำตอบ (JSON) กลับไปให้ JavaScript
 echo json_encode($response);
 exit;
 ?>
